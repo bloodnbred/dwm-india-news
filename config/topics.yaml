@@ -31,6 +31,7 @@ topics:
   - Environment
   - Crime
   - Religion
+  - Misinformation
   - Other
   - Unknown
 
@@ -291,10 +292,23 @@ fallback:
   unknown_labels: ["unknown", "", "n/a", "na", "none", "null", "general", "other"]
   topic: Other
 
-# IFND categories are already coarse (LDA-derived), map straight through.
+# IFND categories are already coarse, but the field mixes two different kinds
+# of value, which is a real schema finding:
+#   topics              GOVERNMENT, POLITICS, ELECTION, COVID-19, VIOLENCE
+#   misinformation type  TERROR, MISLEADING, MISLEADIND (sic), TRAD
+# The type-like values do not say what the news is *about*, so they get their
+# own topic rather than being forced into a subject bucket. Measured 2026-10-01
+# across 56,714 rows: GOVERNMENT 10,923 / VIOLENCE 10,578 / COVID-19 8,710 /
+# POLITICS 8,670 / ELECTION 8,396 / TERROR 4,384 / MISLEADING 4,059 /
+# TRAD 976 / MISLEADIND 18. "MISLEADIND" is a typo for MISLEADING in the source.
 ifnd_category_map:
   election: Politics
   politics: Politics
+  government: Politics
   covid-19: Health
   violence: Crime
+  terror: Misinformation
+  misleading: Misinformation
+  misleadind: Misinformation
+  trad: Misinformation
   miscellaneous: Other

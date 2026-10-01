@@ -25,6 +25,9 @@ datasets:
     url: https://dataverse.harvard.edu/api/access/datafile/:persistentId?persistentId=doi:10.7910/DVN/DPQMQH/P2Z4PM
     filename: india-news-headlines.csv
     expected_bytes: 237855132
+    # Publisher-stated size, not a gate. The file's true row count is measured
+    # at ingest and is 3,297,172.
+    expected_rows: null
     citation: >-
       Kulkarni, Rohit (2020). Times of India News Headlines. Harvard Dataverse.
       https://doi.org/10.7910/DVN/DPQMQH

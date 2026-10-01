@@ -210,6 +210,17 @@ class DatasetSpec:
         return int(value) if value else None
 
     @property
+    def expected_rows(self) -> int | None:
+        """Row count the publisher documents, when known.
+
+        Used by dim_dataset to show a source-side expectation next to what was
+        actually staged. Never used as a pass/fail gate: the published count
+        and the file's true count can legitimately differ.
+        """
+        value = self.raw.get("expected_rows")
+        return int(value) if value else None
+
+    @property
     def encoding(self) -> str:
         return str(self.raw.get("encoding") or "utf-8")
 

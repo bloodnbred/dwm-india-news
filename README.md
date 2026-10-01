@@ -9,15 +9,15 @@ covers how to run it and what state each phase is in.
 
 ## Current state
 
-Phases 0 and 1 (scaffold, ingest) are **built and verified**. Phases 2-9 are
-registered in the CLI but raise `NotImplementedError` naming the phase, so the
-command surface is stable while the rest is written.
+Phases 0-2 (scaffold, ingest, ETL + dimensions) are **built and verified**.
+Phases 3-9 are registered in the CLI but raise `NotImplementedError` naming the
+phase, so the command surface is stable while the rest is written.
 
 | Phase | Output | Status |
 |---|---|---|
 | 0 Scaffold | repo, config, CLI | done |
 | 1 Ingest | `stg_toi`, `stg_ifnd`, `stg_nifty`, `etl_audit` | done, gate passes on real data |
-| 2 ETL + dims | clean tables, `dim_*` | stub |
+| 2 ETL + dims | `cln_*`, `dim_*`, `map_category_topic` | done, gate passes on real data |
 | 3 Features + facts | `fact_*`, bridge, cubes | stub |
 | 4 OLAP | `dwm/olap/`, SQL cookbook | stub |
 | 5-6 Mining | trends, bursts, clusters, rules, classifier | stub |
@@ -47,6 +47,9 @@ Microsoft Store alias, so invoke the interpreter by full path.
 # download the raw CSVs and load the staging tables
 .\.venv\Scripts\python.exe -m dwm ingest
 
+# build the conformed dimensions and the clean tables
+.\.venv\Scripts\python.exe -m dwm etl
+
 # develop on a slice instead of the full file
 .\.venv\Scripts\python.exe -m dwm ingest --sample 50000
 
@@ -59,7 +62,7 @@ Global options accepted by the pipeline commands: `--db`, `--sample`, `--years`,
 `--chunk`, `--dataset/-d`, `--force`, `--skip-fetch`, `--verbose`.
 
 A first full run downloads about 240 MB into `data/raw/` (gitignored) and
-takes roughly 40 seconds. A `.sha256` sidecar is written next to each file, so
+takes roughly a minute. A `.sha256` sidecar is written next to each file, so
 subsequent runs skip the download.
 
 ## Tests
@@ -69,9 +72,10 @@ subsequent runs skip the download.
 .\.venv\Scripts\ruff.exe check .
 ```
 
-59 tests, no network access required. They cover config loading, date parsing
+81 tests, no network access required. They cover config loading, date parsing
 with its precision rules, staging against the row-count gate, the CSV
-normalisation fallback, and the CLI contract.
+normalisation fallback, the CLI contract, and the ETL stage's dedupe grain,
+window derivation and integrity gates.
 
 ## Layout
 
@@ -91,33 +95,51 @@ dwm/
     staging.py       stg_* loaders and the row-count gate
     audit.py         etl_audit funnel
     runner.py        per-dataset orchestration
-  etl/ features/ warehouse/ olap/ mining/ inference/ api/    (stubs)
+  etl/
+    dates.py         SQL date expressions + the IFND Python UDF
+    clean.py         cln_* builders: dedupe, window, topic attachment
+    dims.py          the five conformed dimensions
+    __init__.py      orchestration and the Phase 2 gate
+  features/ warehouse/ olap/ mining/ inference/ api/    (stubs)
 tests/
 docs/
-  01-ingest-etl.md  ingest design, data traps, measured data profile
+  01-ingest-etl.md    ingest design, data traps, measured data profile
+  02-warehouse-schema.md  dimensions, clean tables, gate results
 data/raw/            raw CSVs, gitignored
 warehouse/           dwm.duckdb, gitignored
 ```
 
-## Design notes worth knowing before Phase 2
+## Design notes worth knowing before Phase 3
 
 These are measured findings, not assumptions. Full detail in
-[`docs/01-ingest-etl.md`](docs/01-ingest-etl.md).
+[`docs/01-ingest-etl.md`](docs/01-ingest-etl.md) and
+[`docs/02-warehouse-schema.md`](docs/02-warehouse-schema.md).
 
 - **Never pass `ignore_errors` to `read_csv`.** On duckdb 1.5.6 it silently
   discarded 15,730 of 56,714 rows from a perfectly well-formed file, while
   `count(*)` still reported the full number. The gate reconciles the
-  *materialised* count against the file.
+  *materialised* count against the file. `store_rejects` is also unusable: it
+  drops the same rows and creates a fixed-name `reject_scans` table, so
+  staging a second dataset in the same connection fails outright.
 - **IFND cannot be parsed by DuckDB as shipped.** The loader falls back to a
   strict `csv`-module re-quoting, then reloads. TOI and nifty load directly.
 - **Harvard Dataverse returns 403 to a non-browser User-Agent.** `fetch.py`
   sends a browser UA; override with `DWM_USER_AGENT`.
-- **IFND dates are month-precision or worse.** 67% resolve to a month,
-  12.6% to a day with no year, 20.2% are empty. `fact_statement.date_key` must
-  be nullable and must carry a `date_precision`.
+- **IFND dates are month-precision or worse.** After dedup 33,964 resolve to a
+  month, 6,789 to a day with no year, 10,357 have no date at all.
+  `fact_statement.date_key` must be nullable with a `date_precision`, and a
+  yearless day must never be given one.
 - **IFND's majority-class baseline is 66.7%**, not 50%.
-- **`Local` is 58% of TOI.** It is a location, not a subject; treat the
-  topic-mix question accordingly.
+- **111,146 (date, text) headline pairs are filed under more than one
+  category.** `fact_headline` is therefore one row per (date, text) with a
+  most-frequent primary topic. One row per category would multi-count a third
+  of a million headlines in every topic analysis.
+- **`Local` is 58% of TOI overall and 70% inside the window.** It is a
+  location, not a subject, which is why `dim_topic` carries a `topic_group`
+  separating `Place` from `Subject`. Research question 1 needs that split.
+- **Headlines exist on 1,828 days in the window; the market trades on 1,235.**
+  The 593-day gap is weekends and holidays, so any market-linked join must go
+  through `is_trading_day`, not the calendar.
 
 ## Honesty rules carried from the blueprint
 

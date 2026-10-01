@@ -108,21 +108,6 @@ def _quote(value: str) -> str:
     return "'" + str(value).replace("'", "''") + "'"
 
 
-def count_rejects(con: duckdb.DuckDBPyConnection, rejects_table: str) -> int:
-    """Rows DuckDB refused to parse, or 0 when it created no rejects table.
-
-    DuckDB only materialises the rejects table when something was actually
-    rejected, so its absence is the good case.
-    """
-    present = con.execute(
-        "SELECT count(*) FROM information_schema.tables WHERE table_name = ?",
-        [rejects_table],
-    ).fetchone()[0]
-    if not present:
-        return 0
-    return int(con.execute(f'SELECT count(*) FROM "{rejects_table}"').fetchone()[0])
-
-
 def _ddl(table: str, numeric: list[str]) -> str:
     numeric_ddl = "".join(f", raw_{name} DOUBLE" for name in numeric)
     return f"""
@@ -198,10 +183,15 @@ def stage_dataset(
 
     def insert_from(source: Path) -> None:
         con.execute(_ddl(table, list(numeric)))
-        # No ignore_errors: verified on duckdb 1.5.6 that it makes the reader
-        # discard ~28% of a well-formed file. store_rejects captures genuinely
-        # malformed rows in a side table instead of dropping them silently.
-        con.execute(f"DROP TABLE IF EXISTS {rejects}")
+        # Strict parsing on purpose. Two options were measured on duckdb 1.5.6
+        # and both are unusable:
+        #   ignore_errors=true  silently discarded 15,730 of 56,714 IFND rows
+        #   store_rejects=true  the same, and it also creates a fixed-name
+        #                       "reject_scans" table, so staging a second
+        #                       dataset in the same connection fails outright
+        # A malformed row therefore raises, which triggers the strict csv
+        # re-quoting fallback; and a silent shortfall is caught by the count
+        # reconciliation below. That covers both failure modes honestly.
         con.execute(
             f"""
             INSERT INTO {table}
@@ -213,9 +203,7 @@ def stage_dataset(
                     header = true,
                     all_varchar = true,
                     encoding = {_quote(spec.encoding)},
-                    sample_size = -1,
-                    store_rejects = true,
-                    rejects_table = {_quote(rejects)}
+                    sample_size = -1
                 )
                 {limit}
             )
@@ -225,7 +213,6 @@ def stage_dataset(
             """
         )
 
-    rejects = f"{table}_rejects"
     normalised = False
     try:
         insert_from(path)
@@ -237,8 +224,6 @@ def stage_dataset(
         insert_from(result.target)
         normalised = True
         source_rows = result.rows
-
-    rejected = count_rejects(con, rejects)
 
     staged = int(con.execute(f"SELECT count(*) FROM {table}").fetchone()[0])
     expected = min(source_rows, settings.sample) if settings.is_sampled else source_rows
@@ -255,7 +240,6 @@ def stage_dataset(
         expected = min(source_rows, settings.sample) if settings.is_sampled else source_rows
         insert_from(result.target)
         normalised = True
-        rejected = count_rejects(con, rejects)
         staged = int(con.execute(f"SELECT count(*) FROM {table}").fetchone()[0])
 
     delta = expected - staged
@@ -264,7 +248,7 @@ def stage_dataset(
         "rows_read": source_rows,
         "rows_loaded": staged,
         "rows_rejected": max(0, delta),
-        "csv_rejects": rejected,
+        "reconciled": delta == 0,
         "normalised": normalised,
         "table": table,
         "source_file": path.name,

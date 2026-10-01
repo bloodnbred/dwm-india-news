@@ -20,7 +20,7 @@ from dwm.cli import app
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
-STAGES = ["etl", "features", "build", "olap", "mine", "report"]
+STAGES = ["features", "build", "olap", "mine", "report"]
 runner = CliRunner()
 
 
@@ -31,6 +31,8 @@ def test_help_works_as_a_subprocess() -> None:
         cwd=PROJECT_ROOT,
         capture_output=True,
         text=True,
+        encoding="utf-8",  # the console default is cp1252 and cannot decode this
+        errors="replace",
         timeout=120,
     )
     assert result.returncode == 0, result.stderr
@@ -73,6 +75,15 @@ def test_unbuilt_stage_fails_clearly(stage: str, tmp_path: Path) -> None:
     # the failure names the phase that is still to be built.
     assert isinstance(exc, NotImplementedError), f"got {type(exc).__name__}: {exc}"
     assert "not built yet" in str(exc)
+
+
+def test_etl_is_implemented_and_demands_staging(tmp_path: Path) -> None:
+    """ETL is built, so it must fail on missing input, not on being a stub."""
+    result = runner.invoke(app, ["etl", "--db", str(tmp_path / "x.duckdb")])
+    assert result.exit_code != 0
+    exc = result.exception
+    assert isinstance(exc, RuntimeError), f"got {type(exc).__name__}: {exc}"
+    assert "ingest" in str(exc)
 
 
 def test_tables_command_creates_a_warehouse(tmp_path: Path) -> None:
