@@ -1,0 +1,14 @@
+# Normalise line endings so the repo behaves the same on Windows and Linux.
+* text=auto eol=lf
+
+*.py   text diff=python
+*.md   text
+*.yaml text
+*.yml  text
+*.toml text
+*.txt  text
+
+# Binary-ish files that must never be rewritten
+*.csv  text eol=lf
+*.duckdb binary
+*.duckdb.wal binary

@@ -14,7 +14,9 @@ __pycache__/
 htmlcov/
 
 # --- raw data (large, re-downloadable, never committed) ---
-data/raw/
+# Use a wildcard, not the directory itself: git does not descend into an
+# ignored directory, so "data/raw/" would make the negation below unreachable.
+data/raw/*
 !data/raw/.gitkeep
 
 # --- warehouse (large binary) ---
