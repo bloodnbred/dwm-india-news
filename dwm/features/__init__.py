@@ -1,21 +1,19 @@
-"""Feature engineering stage (Phase 3): word counts, sentiment, sensationalism.
+"""Feature stage (Phase 3): sentiment, sensationalism, counts, keywords.
 
-Not built in the first chunk. Planned outputs, per BLUEPRINT section 2:
-    - word count, char count, headline length
-    - VADER sentiment: compound, positive, negative, neutral
-    - sensationalism: ALL-CAPS token ratio, exclamation/question marks,
-      superlative and urgency lexicon hits
-    - top-N keywords per row for the Apriori transactions
+Outputs, consumed by `dwm/warehouse` to build the fact tables:
+
+    feat_headline        one row per cln_headline
+    feat_statement       one row per cln_statement
+    feat_market_daily    one row per cln_market_daily (returns, volatility)
+    dim_keyword          the capped Apriori vocabulary
+    bridge_headline_keyword   headline <-> keyword, many to many
+
+Honesty note, enforced in the column names: these are STYLE measures. Over the
+unlabelled TOI corpus the output is a risk-signal rate, never a fake-news
+rate. Only IFND carries ground truth, and only the classifier in Phase 6 may
+make an accuracy claim.
 """
 
-from __future__ import annotations
+from dwm.features.runner import run_features
 
-from typing import Any
-
-from dwm.config import Settings
-
-PHASE = "Phase 3 (features)"
-
-
-def run_features(settings: Settings) -> dict[str, Any]:
-    raise NotImplementedError(f"{PHASE} is not built yet.")
+__all__ = ["run_features"]

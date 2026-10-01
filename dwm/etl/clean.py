@@ -113,12 +113,11 @@ DDL_STATEMENT = """
             date_precision,
             raw_category,
             raw_text,
-            CASE upper(trim(raw_label))
-                WHEN 'TRUE'  THEN 'REAL'
-                WHEN 'FALSE' THEN 'FAKE'
-                ELSE 'UNLABELLED'
-            END AS label_code
+            COALESCE(m.label_code, 'UNLABELLED') AS label_code
         FROM typed
+        LEFT JOIN map_label_value m
+               ON m.dataset_code = 'ifnd'
+              AND m.raw_label = upper(trim(typed.raw_label))
     ),    -- One row per distinct statement text. A single representative row is
     -- chosen with QUALIFY so that source_date and date_precision always come
     -- from the SAME row. Using any_value() for each independently can pair a
@@ -229,6 +228,10 @@ def build_clean(
         w_start, w_end, years, max_date,
     )
 
+    # The label map must exist before cln_statement is built, because the
+    # statement DDL joins to it.
+    label_map_rows = _build_label_map(con, specs)
+
     toi = toi_date_expr()
     nifty = nifty_date_expr()
     ifnd_value = ifnd_date_value_expr()
@@ -295,6 +298,7 @@ def build_clean(
             con.execute("SELECT count(*) FROM cln_headline WHERE is_multi_category").fetchone()[0]
         ),
         "category_map": map_info,
+        "label_map_rows": label_map_rows,
         **topic_info,
     }
     log.info(
@@ -407,6 +411,61 @@ def _attach_topics(con: duckdb.DuckDBPyConnection) -> dict[str, int]:
         con.execute("SELECT count(*) FROM cln_headline WHERE topic_name IS NULL").fetchone()[0]
     )
     return {"headlines_without_topic": unmapped}
+
+
+DDL_LABEL_MAP = """
+    CREATE OR REPLACE TABLE map_label_value (
+        dataset_code  VARCHAR,
+        raw_label     VARCHAR,
+        label_code    VARCHAR
+    )
+"""
+
+
+def _build_label_map(con: duckdb.DuckDBPyConnection, specs: dict[str, DatasetSpec]) -> int:
+    """Build the raw-label to label_code mapping from config.
+
+    The mapping comes from `config/datasets.yaml` and is applied by the tested
+    `normalise_label`, not by a hard-coded SQL CASE. The IFND source mixes
+    "TRUE", "FALSE" and "Fake" in the same column; a CASE over just 'TRUE' and
+    'FALSE' silently turned "Fake" rows into UNLABELLED, which would have
+    quietly removed fakes from the classifier's training data in Phase 6.
+    """
+    from dwm.parse import normalise_label
+
+    con.execute(DDL_LABEL_MAP)
+    ifnd = specs.get("ifnd")
+    if ifnd is None or not ifnd.is_labelled:
+        return 0
+
+    accepted = ifnd.label_values
+    found = [
+        str(r[0])
+        for r in con.execute(
+            "SELECT DISTINCT raw_label FROM stg_ifnd "
+            "WHERE raw_label IS NOT NULL AND trim(raw_label) <> ''"
+        ).fetchall()
+    ]
+    rows: list[tuple[str, str, str]] = []
+    unmapped: list[str] = []
+    for raw in found:
+        canonical = normalise_label(raw, accepted)
+        if canonical is None:
+            unmapped.append(raw)
+            continue
+        code = "REAL" if canonical == 1 else "FAKE"
+        rows.append(("ifnd", raw.strip().upper(), code))
+
+    if rows:
+        con.executemany("INSERT INTO map_label_value VALUES (?, ?, ?)", rows)
+    if unmapped:
+        # Not fatal: an unrecognised label becomes UNLABELLED and is
+        # reported, but it must not be silently folded into a class.
+        log.warning(
+            "ifnd: %d distinct raw label value(s) not in config, mapped to "
+            "UNLABELLED: %s", len(unmapped), sorted(unmapped)[:10],
+        )
+    return len(rows)
 
 
 def _count(con: duckdb.DuckDBPyConnection, table: str) -> int:

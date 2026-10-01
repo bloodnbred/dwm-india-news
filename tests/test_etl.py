@@ -219,9 +219,42 @@ def test_label_is_normalised(etl_db, etl_settings: Settings) -> None:
     labels = dict(
         etl_db.execute("SELECT label_code, count(*) FROM cln_statement GROUP BY 1").fetchall()
     )
-    assert set(labels) <= {"REAL", "FAKE", "UNLABELLED"}
+    # The fixture labels are TRUE, Fake and FALSE. All three are recognised,
+    # so nothing falls through to UNLABELLED.
+    assert set(labels) == {"REAL", "FAKE"}
     assert labels["REAL"] == 1      # the two TRUE rows dedupe to one
-    assert labels["FAKE"] == 1
+    assert labels["FAKE"] == 2      # "Fake" and "FALSE"
+
+
+def test_mixed_case_fake_label_is_not_lost(etl_db, etl_settings: Settings) -> None:
+    """Regression: "Fake" must map to FAKE, not to UNLABELLED.
+
+    The first implementation used a SQL CASE over the literals 'TRUE' and
+    'FALSE'. The IFND source also writes "Fake", which matches neither, so
+    every such row silently became UNLABELLED and fakes would have vanished
+    from the Phase 6 classifier's training data.
+    """
+    run_etl(etl_settings, con=etl_db)
+    code = etl_db.execute(
+        "SELECT label_code FROM cln_statement WHERE statement_text = ?",
+        ["Statement with a day but no year"],
+    ).fetchone()[0]
+    assert code == "FAKE"
+    assert etl_db.execute(
+        "SELECT count(*) FROM cln_statement WHERE label_code = 'UNLABELLED'"
+    ).fetchone()[0] == 0
+
+
+def test_label_map_is_built_from_config(etl_db, etl_settings: Settings) -> None:
+    run_etl(etl_settings, con=etl_db)
+    rows = dict(
+        etl_db.execute(
+            "SELECT raw_label, label_code FROM map_label_value WHERE dataset_code='ifnd'"
+        ).fetchall()
+    )
+    assert rows["TRUE"] == "REAL"
+    assert rows["FALSE"] == "FAKE"
+    assert rows["FAKE"] == "FAKE"
 
 
 # ---------------------------------------------------------------------------

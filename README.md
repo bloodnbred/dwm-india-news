@@ -9,16 +9,17 @@ covers how to run it and what state each phase is in.
 
 ## Current state
 
-Phases 0-2 (scaffold, ingest, ETL + dimensions) are **built and verified**.
-Phases 3-9 are registered in the CLI but raise `NotImplementedError` naming the
-phase, so the command surface is stable while the rest is written.
+Phases 0-3 (scaffold, ingest, ETL + dimensions, features + facts) are **built
+and verified**. Phases 4-9 are registered in the CLI but raise
+`NotImplementedError` naming the phase, so the command surface is stable while
+the rest is written.
 
 | Phase | Output | Status |
 |---|---|---|
 | 0 Scaffold | repo, config, CLI | done |
 | 1 Ingest | `stg_toi`, `stg_ifnd`, `stg_nifty`, `etl_audit` | done, gate passes on real data |
 | 2 ETL + dims | `cln_*`, `dim_*`, `map_category_topic` | done, gate passes on real data |
-| 3 Features + facts | `fact_*`, bridge, cubes | stub |
+| 3 Features + facts | `fact_*`, `dim_keyword`, bridge, cubes | done, gate passes on real data |
 | 4 OLAP | `dwm/olap/`, SQL cookbook | stub |
 | 5-6 Mining | trends, bursts, clusters, rules, classifier | stub |
 | 7 Inference | `facts.json`, `report.md` | stub |
@@ -50,6 +51,12 @@ Microsoft Store alias, so invoke the interpreter by full path.
 # build the conformed dimensions and the clean tables
 .\.venv\Scripts\python.exe -m dwm etl
 
+# score sentiment, sensationalism, counts and keywords
+.\.venv\Scripts\python.exe -m dwm features
+
+# build the fact tables and the cubes
+.\.venv\Scripts\python.exe -m dwm build
+
 # develop on a slice instead of the full file
 .\.venv\Scripts\python.exe -m dwm ingest --sample 50000
 
@@ -72,10 +79,11 @@ subsequent runs skip the download.
 .\.venv\Scripts\ruff.exe check .
 ```
 
-81 tests, no network access required. They cover config loading, date parsing
+123 tests, no network access required. They cover config loading, date parsing
 with its precision rules, staging against the row-count gate, the CSV
-normalisation fallback, the CLI contract, and the ETL stage's dedupe grain,
-window derivation and integrity gates.
+normalisation fallback, the CLI contract, the ETL stage's dedupe grain and
+window derivation, the feature stage's measure definitions, and the Phase 3
+fact/cube gate.
 
 ## Layout
 
@@ -83,6 +91,7 @@ window derivation and integrity gates.
 config/
   datasets.yaml      source URLs, column aliases, date formats, provenance
   topics.yaml        raw category -> coarse topic, with ordered regex rules
+  features.yaml      sensationalism weights, thresholds, vocabulary size
 dwm/
   cli.py             Typer app, one command per pipeline stage
   config.py          paths, run options, dataset specs, topic map
@@ -100,20 +109,29 @@ dwm/
     clean.py         cln_* builders: dedupe, window, topic attachment
     dims.py          the five conformed dimensions
     __init__.py      orchestration and the Phase 2 gate
-  features/ warehouse/ olap/ mining/ inference/ api/    (stubs)
+  features/
+    lexicons.py      stopword, superlative and urgency lists (offline, pinned)
+    scoring.py       one pass: sentiment, sensationalism, counts, keywords
+    runner.py        chunked runner, optional process pool, SQL market features
+  warehouse/
+    facts.py         the three fact tables
+    cubes.py         pre-aggregated cubes, sums only
+  olap/ mining/ inference/ api/    (stubs)
 tests/
 docs/
-  01-ingest-etl.md    ingest design, data traps, measured data profile
-  02-warehouse-schema.md  dimensions, clean tables, gate results
+  01-ingest-etl.md         ingest design, data traps, measured data profile
+  02-warehouse-schema.md   dimensions, clean tables, gate results
+  03-features-facts.md     measure definitions, cubes, Phase 3 gate
 data/raw/            raw CSVs, gitignored
 warehouse/           dwm.duckdb, gitignored
 ```
 
-## Design notes worth knowing before Phase 3
+## Design notes worth knowing before Phase 4
 
 These are measured findings, not assumptions. Full detail in
-[`docs/01-ingest-etl.md`](docs/01-ingest-etl.md) and
-[`docs/02-warehouse-schema.md`](docs/02-warehouse-schema.md).
+[`docs/01-ingest-etl.md`](docs/01-ingest-etl.md),
+[`docs/02-warehouse-schema.md`](docs/02-warehouse-schema.md) and
+[`docs/03-features-facts.md`](docs/03-features-facts.md).
 
 - **Never pass `ignore_errors` to `read_csv`.** On duckdb 1.5.6 it silently
   discarded 15,730 of 56,714 rows from a perfectly well-formed file, while
@@ -139,7 +157,17 @@ These are measured findings, not assumptions. Full detail in
   separating `Place` from `Subject`. Research question 1 needs that split.
 - **Headlines exist on 1,828 days in the window; the market trades on 1,235.**
   The 593-day gap is weekends and holidays, so any market-linked join must go
-  through `is_trading_day`, not the calendar.
+  through `is_trading_day`, not the calendar. `cube_day_topic` exists for this.
+- **Never hard-code a dimension key in fact DDL.** `dim_dataset` numbers its
+  rows by sorted code, so `toi` is key 3, not 1. A literal silently pointed
+  every headline at the wrong source while all row counts stayed correct. The
+  DDL now looks keys up, and tests cover it.
+- **Cubes store sums, never averages.** A test rejects any column named like a
+  mean. Rates are always `count / headline_count` computed at query time.
+- **`volatility_20d` is NULL until 20 sessions exist.** A 20-day volatility
+  from three observations would poison the Phase 6 correlation.
+- **`is_risk_signal` equals `is_sensational` for TOI** because unlabelled
+  headlines support style signals only. Report it as a risk-signal *rate*.
 
 ## Honesty rules carried from the blueprint
 

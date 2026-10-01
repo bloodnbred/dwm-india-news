@@ -1,0 +1,84 @@
+# Feature thresholds and weights.
+#
+# Kept out of the code so the report can state them and a reader can see
+# exactly what produced a number. Changing anything here changes published
+# figures, so the values are versioned and echoed into the run summary.
+
+version: 1
+
+# --- sensationalism --------------------------------------------------------
+# The composite is a weighted sum of five bounded sub-signals, each squashed
+# into [0,1] by dividing by a saturation point, then clipped to [0,1].
+# The weights sum to 1.0, so the score reads as a rough percentage of
+# "maximum possible sensationalism".
+#
+# This is a STYLE heuristic, not a validated measure. Nothing here is
+# evidence that a headline is false. The blueprint's honesty rule applies:
+# over the unlabelled TOI corpus the result is a RISK-SIGNAL RATE.
+sensationalism:
+  weights:
+    caps_ratio: 0.35        # share of ALLCAPS tokens, saturating at 0.30
+    exclamation: 0.20       # count of '!', saturating at 2
+    question: 0.10          # count of '?', saturating at 2
+    superlative: 0.20       # lexicon hits, saturating at 2
+    urgency: 0.15           # lexicon hits, saturating at 2
+  saturation:
+    caps_ratio: 0.30
+    exclamation: 2
+    question: 2
+    superlative: 2
+    urgency: 2
+  # A CAPS token must be at least this long to count, so "I", "A" and "PM"
+  # do not register as shouting.
+  min_caps_length: 3
+  # Percentile-calibrated, not a round number.
+  #
+  # The composite has no natural zero: most headlines score exactly 0, so
+  # there is nothing to divide by. The threshold is therefore set at the
+  # measured 95th percentile of the corpus, which flags the most
+  # sensational ~5% of headlines.
+  #
+  # Measured percentiles over all 3,154,916 headlines (2026-10-02):
+  #   p50 0.0000  p75 0.0000  p90 0.1667  p95 0.2208  p98 0.2917
+  #   p99 0.3500  max 0.6500
+  # Rate by threshold: 0.05 -> 21.9%  0.10 -> 18.5%  0.20 -> 5.2%
+  #                    0.30 -> 1.6%   0.40 -> 0.06%  0.50 -> 0.005%
+  #
+  # The first guess of 0.5 flagged 156 rows in 3.15M, which would have made
+  # research question 3 unanswerable. The highest-scoring rows are exactly
+  # the intended target ("SHOCKING: Worst celebrity GOOF-UPS revealed!" at
+  # 0.65), so the score is sound and only the cut-off was wrong.
+  #
+  # Because this is a chosen cut-off, the report must present the rate across
+  # a range of thresholds, not this single number.
+  threshold: 0.2208
+
+# --- sentiment -------------------------------------------------------------
+# VADER's own guidance is that a compound score beyond +/-0.05 is a
+# meaningful sentiment signal. Both thresholds are recorded in the report.
+sentiment:
+  negative_compound: -0.5   # "negative" style flag
+  positive_compound: 0.5
+
+# --- keywords --------------------------------------------------------------
+keywords:
+  # The blueprint caps the Apriori vocabulary at the top 300 terms.
+  vocabulary_size: 300
+  min_length: 3
+  min_doc_frequency: 20     # drop hapax noise before the cap
+  # Keywords kept per headline for the Apriori transactions. Keeping this
+  # small is what makes the itemset search tractable.
+  max_per_headline: 8
+
+# --- runtime ---------------------------------------------------------------
+runtime:
+  # Rows per chunk. Bounds peak memory and controls how often the audit can
+  # be checkpointed; it does not affect throughput much.
+  chunk_size: 50000
+  # Scoring is single threaded on purpose. Measured on the full corpus:
+  # ~25,900 rows/s serial (about 2 minutes for 3.15M headlines) versus
+  # ~39 rows/s with a process pool, because pickling headline text to workers
+  # and results back on Windows costs far more than the scoring. Set true only
+  # if the per-row work becomes substantially heavier than the transfer.
+  use_multiprocessing: false
+  workers: null             # only consulted when use_multiprocessing is true

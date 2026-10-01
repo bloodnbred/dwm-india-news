@@ -20,7 +20,7 @@ from dwm.cli import app
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
-STAGES = ["features", "build", "olap", "mine", "report"]
+STAGES = ["olap", "mine", "report"]
 runner = CliRunner()
 
 
@@ -78,12 +78,26 @@ def test_unbuilt_stage_fails_clearly(stage: str, tmp_path: Path) -> None:
 
 
 def test_etl_is_implemented_and_demands_staging(tmp_path: Path) -> None:
-    """ETL is built, so it must fail on missing input, not on being a stub."""
+    """Implemented stages must fail on missing input, not on being a stub."""
     result = runner.invoke(app, ["etl", "--db", str(tmp_path / "x.duckdb")])
     assert result.exit_code != 0
     exc = result.exception
     assert isinstance(exc, RuntimeError), f"got {type(exc).__name__}: {exc}"
     assert "ingest" in str(exc)
+
+
+@pytest.mark.parametrize(
+    ("stage", "needed"),
+    [("features", "etl"), ("build", "features")],
+)
+def test_implemented_stage_demands_its_prerequisite(
+    stage: str, needed: str, tmp_path: Path
+) -> None:
+    result = runner.invoke(app, [stage, "--db", str(tmp_path / "x.duckdb")])
+    assert result.exit_code != 0
+    exc = result.exception
+    assert isinstance(exc, RuntimeError), f"got {type(exc).__name__}: {exc}"
+    assert needed in str(exc)
 
 
 def test_tables_command_creates_a_warehouse(tmp_path: Path) -> None:
