@@ -9,8 +9,8 @@ covers how to run it and what state each phase is in.
 
 ## Current state
 
-Phases 0-3 (scaffold, ingest, ETL + dimensions, features + facts) are **built
-and verified**. Phases 4-9 are registered in the CLI but raise
+Phases 0-4 (scaffold, ingest, ETL + dimensions, features + facts, OLAP) are
+**built and verified**. Phases 5-9 are registered in the CLI but raise
 `NotImplementedError` naming the phase, so the command surface is stable while
 the rest is written.
 
@@ -20,8 +20,8 @@ the rest is written.
 | 1 Ingest | `stg_toi`, `stg_ifnd`, `stg_nifty`, `etl_audit` | done, gate passes on real data |
 | 2 ETL + dims | `cln_*`, `dim_*`, `map_category_topic` | done, gate passes on real data |
 | 3 Features + facts | `fact_*`, `dim_keyword`, bridge, cubes | done, gate passes on real data |
-| 4 OLAP | `dwm/olap/`, SQL cookbook | stub |
-| 5-6 Mining | trends, bursts, clusters, rules, classifier | stub |
+| 4 OLAP | `dwm/olap/`, SQL cookbook | done, verified against the warehouse |
+| 5-6 Mining | trends, bursts, clusters, rules, classifier | **next** |
 | 7 Inference | `facts.json`, `report.md` | stub |
 | 8 API + dashboard | FastAPI, Streamlit | stub |
 | 9 Polish | docs, report, viva sheet | partial |
@@ -57,6 +57,15 @@ Microsoft Store alias, so invoke the interpreter by full path.
 # build the fact tables and the cubes
 .\.venv\Scripts\python.exe -m dwm build
 
+# OLAP: list the operations, or run one
+.\.venv\Scripts\python.exe -m dwm olap
+.\.venv\Scripts\python.exe -m dwm olap --op topic_mix
+.\.venv\Scripts\python.exe -m dwm olap --op slice -p topic=Business
+.\.venv\Scripts\python.exe -m dwm olap --op drill_across -p topic=Business --limit 20
+
+# the whole pipeline from scratch, with timings
+powershell -ExecutionPolicy Bypass -File .\run_all.ps1 -clean
+
 # develop on a slice instead of the full file
 .\.venv\Scripts\python.exe -m dwm ingest --sample 50000
 
@@ -79,11 +88,26 @@ subsequent runs skip the download.
 .\.venv\Scripts\ruff.exe check .
 ```
 
-123 tests, no network access required. They cover config loading, date parsing
+157 tests, no network access required. They cover config loading, date parsing
 with its precision rules, staging against the row-count gate, the CSV
 normalisation fallback, the CLI contract, the ETL stage's dedupe grain and
-window derivation, the feature stage's measure definitions, and the Phase 3
-fact/cube gate.
+window derivation, the feature stage's measure definitions, the Phase 3
+fact/cube gate, and every OLAP operation.
+
+## Timings, measured on the full corpus
+
+| stage | time |
+|---|---|
+| `ingest` (files already downloaded) | 10s |
+| `etl` | 9s |
+| `features` (3.15M headlines through VADER) | 165s cold, ~2s if already scored |
+| `build` (facts + cubes) | 5s |
+| **full clean run** | **about 3.3 minutes** |
+
+`features` is resumable and fingerprinted. An interrupted run continues from
+the last scored row instead of restarting, and a change to any measure
+definition discards the cache automatically rather than leaving stale numbers
+in the warehouse.
 
 ## Layout
 
@@ -116,7 +140,9 @@ dwm/
   warehouse/
     facts.py         the three fact tables
     cubes.py         pre-aggregated cubes, sums only
-  olap/ mining/ inference/ api/    (stubs)
+  olap/
+    operations.py  slice, dice, roll_up, drill_down, pivot, cube, drill_across
+  mining/ inference/ api/    (stubs)
 tests/
 docs/
   01-ingest-etl.md         ingest design, data traps, measured data profile
