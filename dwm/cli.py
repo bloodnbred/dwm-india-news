@@ -191,14 +191,38 @@ def olap(
     db: DbOpt = None,
     operation: Annotated[
         str | None,
-        typer.Option("--op", help="Named OLAP operation, e.g. cube, rollup, pivot."),
+        typer.Option("--op", help="Named operation: slice, slice_year, dice, roll_up, "
+                                 "drill_down, top_months, pivot, cube, drill_across, "
+                                 "topic_mix. Omit to list them."),
     ] = None,
+    param: Annotated[
+        list[str] | None,
+        typer.Option("--param", "-p", help="Parameter as key=value, e.g. -p topic=Sports. Repeatable."),
+    ] = None,
+    limit: Annotated[int, typer.Option("--limit", min=1, help="Maximum rows printed.")] = 200,
 ) -> None:
     """Run OLAP operations: slice, dice, rollup, drill-down, pivot, drill-across."""
     from dwm.olap import run_olap
 
     settings = _settings(db, None, 5, 100_000)
-    _echo_json(run_olap(settings, operation))
+    params: dict[str, Any] = {}
+    for item in param or []:
+        if "=" not in item:
+            raise typer.BadParameter(f"--param expects key=value, got {item!r}")
+        key, _, value = item.partition("=")
+        params[key.strip()] = value.strip()
+
+    result = run_olap(settings, operation, **params)
+    # Truncation is stated in the payload, never silent.
+    if "rows" in result and len(result["rows"]) > limit:
+        result["meta"] = {
+            **result.get("meta", {}),
+            "truncated": True,
+            "rows_available": len(result["rows"]),
+            "rows_shown": limit,
+        }
+        result["rows"] = result["rows"][:limit]
+    _echo_json(result)
 
 
 @app.command()

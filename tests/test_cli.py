@@ -20,7 +20,7 @@ from dwm.cli import app
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
-STAGES = ["olap", "mine", "report"]
+STAGES = ["mine", "report"]
 runner = CliRunner()
 
 
@@ -98,6 +98,24 @@ def test_implemented_stage_demands_its_prerequisite(
     exc = result.exception
     assert isinstance(exc, RuntimeError), f"got {type(exc).__name__}: {exc}"
     assert needed in str(exc)
+
+
+def test_olap_lists_its_operations(tmp_path: Path) -> None:
+    """OLAP is built, so with no --op it enumerates rather than raising."""
+    result = runner.invoke(app, ["olap", "--db", str(tmp_path / "x.duckdb")])
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    names = {o["name"] for o in payload["operations"]}
+    assert {
+        "slice", "dice", "roll_up", "drill_down", "pivot", "cube", "drill_across",
+    } <= names
+
+
+def test_olap_rejects_a_malformed_param(tmp_path: Path) -> None:
+    result = runner.invoke(
+        app, ["olap", "--db", str(tmp_path / "x.duckdb"), "-p", "nonsense"]
+    )
+    assert result.exit_code != 0
 
 
 def test_tables_command_creates_a_warehouse(tmp_path: Path) -> None:
