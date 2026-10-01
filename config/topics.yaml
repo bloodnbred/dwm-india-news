@@ -1,0 +1,300 @@
+# TOI headline_category -> coarse topic map.
+#
+# Source categories are hierarchical and dot separated, e.g. "sports.wwe",
+# "business.gadgets", "politics.parliament". This file maps the TOP-LEVEL
+# prefix to a coarse topic. Deeper segments are kept in dim_topic_detail for
+# drill-down, they do not affect the coarse topic.
+#
+# Anything not matched falls through to `fallback.topic`. This satisfies the
+# Phase 2 gate "every raw category maps to a topic": unmapped categories map to
+# a topic, they are never dropped, and the count of fallbacks is reported in
+# etl_audit so the map can be extended.
+
+version: 1
+
+# Coarse topics produced by this map. dim_topic rows are created from here.
+topics:
+  - Politics
+  - Business
+  - Sports
+  - Entertainment
+  - Technology
+  - World
+  - Nation
+  - Local
+  - Health
+  - Education
+  - Automobile
+  - Travel
+  - Food
+  - Lifestyle
+  - Environment
+  - Crime
+  - Religion
+  - Other
+  - Unknown
+
+# Exact top-level prefix -> coarse topic.
+prefix_map:
+  # --- politics and current affairs ---
+  politics: Politics
+  "pol.": Politics
+  "top-stories": Nation
+  nation: Nation
+  "nation/": Nation
+  india: Nation
+  "search": Other
+  "lead-stories": Nation
+  brief: Nation
+  # city.* is ~19% of all rows on its own (mumbai, delhi, chennai, ...).
+  # Folding it into Nation would swamp the topic-mix analysis, so local
+  # coverage gets its own topic.
+  city: Local
+  cities: Local
+  noida: Local
+  delhi: Local
+  mumbai: Local
+  bengaluru: Local
+  hyderabad: Local
+  chennai: Local
+  kolkata: Local
+  pune: Local
+  "world/": World
+  world: World
+  "international": World
+
+  # --- business and markets ---
+  business: Business
+  business2: Business
+  "business/": Business
+  economy: Business
+  markets: Business
+  market: Business
+  finance: Business
+  "personal-finance": Business
+  "companies": Business
+  company: Business
+  "jobs": Business
+  "jobs-and-careers": Business
+  "earnings": Business
+  "ipo": Business
+  "mutual-funds": Business
+  "property": Business
+  "real-estate": Business
+
+  # --- sport ---
+  sports: Sports
+  sport: Sports
+  cricket: Sports
+  football: Sports
+  tennis: Sports
+  badminton: Sports
+  "athletics": Sports
+  kabaddi: Sports
+  hockey: Sports
+  boxing: Sports
+  wrestling: Sports
+  "sports-wwe": Sports
+  "wwe": Sports
+  "sports-ipl": Sports
+  ipl: Sports
+
+  # --- entertainment and media ---
+  entertainment: Entertainment
+  "entertainment/": Entertainment
+  movies: Entertainment
+  movie: Entertainment
+  bollywood: Entertainment
+  "hollywood": Entertainment
+  tv: Entertainment
+  "television": Entertainment
+  "web-series": Entertainment
+  "netflix": Entertainment
+  "music": Entertainment
+  "celebrity": Entertainment
+  "box-office": Entertainment
+  "tv-reality-show": Entertainment
+  "premium": Entertainment
+  "lifestyle/": Lifestyle
+  lifestyle: Lifestyle
+  "social": Lifestyle
+  "sex-and-relationships": Lifestyle
+
+  # --- technology ---
+  technology: Technology
+  tech: Technology
+  "technology/": Technology
+  gadgets: Technology
+  "gadgets/": Technology
+  "telecom": Technology
+  "it": Technology
+  "internet": Technology
+  "software": Technology
+  "apps": Technology
+  "auto": Automobile
+  automobile: Automobile
+  "automobile": Automobile
+  "cars": Automobile
+  "bike": Automobile
+  "motors": Automobile
+  "auto-lifestyle": Automobile
+
+  # --- health and medicine ---
+  health: Health
+  "health/": Health
+  medicine: Health
+  "healthcare": Health
+  fitness: Health
+  diet: Health
+  "wellness": Health
+  covid: Health
+  "covid-19": Health
+  "coronavirus": Health
+
+  # --- education ---
+  education: Education
+  "education/": Education
+  "schools": Education
+  "colleges": Education
+  "exam": Education
+  "entrance-exams": Education
+  "board-exams": Education
+  "competitive-exams": Education
+
+  # --- travel and food ---
+  travel: Travel
+  tourism: Travel
+  "travel/": Travel
+  "destination": Travel
+  food: Food
+  "food/": Food
+  "restaurants": Food
+  recipe: Food
+  "chef": Food
+
+  citizen: Local
+  nri: Nation
+  "nri.community": Nation
+
+  # --- lifestyle, which TOI splits into health/beauty/relationships ---
+  life-style: Lifestyle
+  "life-style.people": Lifestyle
+  "life-style.relationships": Lifestyle
+  "life-style.beauty": Lifestyle
+  "life-style.spotlight": Lifestyle
+  "life-style.health-fitness": Health
+  "life-style.health-fitness.health-news": Health
+  "life-style.health-fitness.diet": Health
+  "life-style.health-fitness.fitness": Health
+  fashion: Lifestyle
+
+  # --- the "home" section ---
+  "home.education": Education
+  "home.science": Technology
+  "home.environment": Environment
+  "home.environment.flora-fauna": Environment
+  "home.health": Health
+  "home.sunday-times": Nation
+  "home.sunday-times.deep-focus": Nation
+  "home.sunday-times.all-that-matters": Nation
+  home: Nation
+
+  # --- general news furniture ---
+  news: Nation
+  "top-headlines": Nation
+  "top-stories": Nation
+  "edit-page": Nation
+  blogs: Nation
+  "speak-out": Nation
+  "others.news-interviews": Nation
+  "removed": Other
+
+  # --- environment ---
+  environment: Environment
+  "environment/": Environment
+  "wildlife": Environment
+  "nature": Environment
+  "climate": Environment
+  pollution: Environment
+  "space": Environment
+
+  # --- crime and justice ---
+  crime: Crime
+  "crime/": Crime
+  "murder": Crime
+  "fraud": Crime
+  "court": Crime
+  "law": Crime
+  "police": Crime
+  "arrest": Crime
+  "jail": Crime
+
+  # --- religion and festivals ---
+  religion: Religion
+  "religion/": Religion
+  "temple": Religion
+  "god": Religion
+  "festival": Religion
+  "festivals": Religion
+  "astrology": Religion
+  "horoscope": Religion
+  "puja": Religion
+
+# Applied after prefix_map and before keyword_rules. Order matters: the first
+# pattern that matches wins. Needed because TOI has whole families that cannot
+# be enumerated, notably the Times city editions (delhi-times, bombay-times,
+# lucknow-times, ...), which together are ~46k rows.
+prefix_patterns:
+  - topic: Local
+    match: "-times$"
+  - topic: Local
+    match: "^city[. ]"
+  - topic: Health
+    match: "^life-style[.]health"
+  - topic: Health
+    match: "health|fitness|medical|hospital"
+  - topic: Education
+    match: "education|school|college|exam|student"
+  - topic: Environment
+    match: "environment|wildlife|flora|fauna|pollution|climate"
+  - topic: Technology
+    match: "^home[.]science|tech|gadget|software|internet"
+  - topic: Entertainment
+    match: "entertainment|movie|bollywood|tv|music|celebrity"
+  - topic: Sports
+    match: "sport|cricket|football|tennis|olympic"
+  - topic: Business
+    match: "business|market|economy|finance|stock|ipo|company"
+  - topic: Politics
+    match: "politic|parliament|election|congress|minister"
+  - topic: Automobile
+    match: "^auto[. ]|car|bike|vehicle|motor"
+  - topic: Travel
+    match: "travel|tourism|destination"
+
+# Applied after prefix_patterns. Order matters: first match wins.
+keyword_rules:
+  - topic: Technology
+    match: ["ai", "artificial intelligence", "software", "startup", "app", "chip", "data"]
+  - topic: Health
+    match: ["virus", "vaccine", "hospital", "covid", "patient", "disease", "outbreak"]
+  - topic: Business
+    match: ["stock", "market", "rupee", "crore", "ipo", "profit", "gdp", "inflation"]
+  - topic: Sports
+    match: ["match", "win", "goal", "innings", "tournament", "player", "coach"]
+  - topic: Entertainment
+    match: ["film", "movie", "actor", "song", "trailer", "box office"]
+
+fallback:
+  # Categories that carry no signal. Assigned rather than dropped so the
+  # headline still joins to a topic and counts stay reconcilable.
+  unknown_labels: ["unknown", "", "n/a", "na", "none", "null", "general", "other"]
+  topic: Other
+
+# IFND categories are already coarse (LDA-derived), map straight through.
+ifnd_category_map:
+  election: Politics
+  politics: Politics
+  covid-19: Health
+  violence: Crime
+  miscellaneous: Other

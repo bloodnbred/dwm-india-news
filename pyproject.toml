@@ -1,0 +1,32 @@
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+addopts = "-q --strict-markers"
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.coverage.run]
+branch = true
+source = ["dwm"]
+omit = ["*/__main__.py", "dwm/cli.py"]
+
+[tool.coverage.report]
+exclude_lines = [
+  "pragma: no cover",
+  "if TYPE_CHECKING:",
+  "raise NotImplementedError",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = [".venv", "data", "warehouse"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "C4", "SIM"]
+ignore = [
+  "E501",   # line length handled by the formatter
+  "B008",   # Typer/FastAPI use calls in argument defaults by design
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101"]

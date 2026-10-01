@@ -1,0 +1,145 @@
+# Datasets: source URLs, column aliases and parsing rules.
+#
+# Column names are declared as alias lists so that a header change in a
+# re-downloaded file is fixed here, not in code (BLUEPRINT section 7 fallback).
+# The first alias that appears in the source header wins.
+#
+# `provenance` is surfaced verbatim in the project report's limitations
+# section. Never invent a source.
+
+defaults:
+  encoding: utf-8
+  # Header row is always row 0 for all three current sources.
+  header: true
+
+datasets:
+
+  # ------------------------------------------------------------------
+  # Primary: Times of India headlines, unlabelled, ~3.3M rows, 2001-mid 2020
+  # Verified 2026-10-01: HTTP 206, content-range bytes 0-400/237855132
+  # ------------------------------------------------------------------
+  toi:
+    enabled: true
+    name: Times of India News Headlines
+    code: toi
+    url: https://dataverse.harvard.edu/api/access/datafile/:persistentId?persistentId=doi:10.7910/DVN/DPQMQH/P2Z4PM
+    filename: india-news-headlines.csv
+    expected_bytes: 237855132
+    citation: >-
+      Kulkarni, Rohit (2020). Times of India News Headlines. Harvard Dataverse.
+      https://doi.org/10.7910/DVN/DPQMQH
+    license: CC0 1.0 Universal (public domain dedication)
+    provenance: >-
+      Harvard Dataverse DOI 10.7910/DVN/DPQMQH, the official publisher of the
+      dataset. Single outlet (TOI), English only, headlines only, no article body.
+    # Keys here are the LOGICAL field names the loader looks up. Values are
+    # the candidate header names, first match wins.
+    columns:
+      text: [headline_text, text, headline]
+      category: [headline_category, category, headline_cat]
+      date: [publish_date, publishdate, date]
+    text_column: text
+    category_column: category
+    date_column: date
+    date_formats: ["%Y%m%d", "%Y-%m-%d", "%d-%m-%Y", "%d-%b-%Y"]
+    date_precision: day
+    # Categories are hierarchical, dot separated, e.g. "sports.wwe".
+    category_separator: "."
+    labelled: false
+    # No label column: BLUEPRINT section 3 honesty rule, "risk-signal rate" only.
+    label_column: null
+
+  # ------------------------------------------------------------------
+  # Validation: Indian Fake News Dataset, labelled TRUE/FALSE
+  # Verified 2026-10-01: HTTP 206, content-range bytes 0-400/11674892
+  # NOTE: dates are month-year only ("Oct-20", "Nov 2020"), not day-level.
+  # ------------------------------------------------------------------
+  ifnd:
+    enabled: true
+    name: IFND - Indian Fake News Dataset
+    code: ifnd
+    url: https://raw.githubusercontent.com/sonalgarg174/Dataset/main/IFND.csv
+    filename: IFND.csv
+    expected_bytes: 11674892
+    citation: >-
+      Sharma, D. K., & Garg, S. (2021). IFND: a benchmark dataset for fake news
+      detection. Complex & Intelligent Systems, 9, 2843-2863.
+      https://doi.org/10.1007/s40747-021-00552-1
+    license: See publisher terms; redistributed by the dataset authors on GitHub
+    provenance: >-
+      Author's own copy, github.com/sonalgarg174/Dataset. The Fake class is
+      partly produced by an LSTM-based augmentation algorithm (real news
+      37,809 vs real fake 7,271 before augmentation), so reported accuracy is
+      an upper bound and this limitation is stated in the report.
+    columns:
+      id: [id, ID, Id]
+      text: [Statement, statement, headline, text]
+      image: [Image, image]
+      web: [Web, web, source]
+      category: [Category, category]
+      date: [Date, date]
+      label: [Label, label]
+    text_column: text
+    category_column: category
+    date_column: date
+    # Measured 2026-10-01 on the real file, which mixes three shapes:
+    #   "Oct-20", "Nov 2020"   month-year      -> precision "month"
+    #   "20-Sep"               day-month, NO year -> precision "month_day",
+    #                                             value stays NULL (never guess)
+    #   ""                     absent          -> precision "none"
+    # 11,321 of 56,714 rows have no date at all, so date_key must be nullable.
+    date_formats: ["%b-%y", "%b-%Y", "%b %y", "%b %Y", "%d-%b", "%d %b",
+                   "%Y-%m-%d", "%d-%m-%Y", "%Y"]
+    # Declared best case. The loader downgrades to "month" per row when only
+    # a month can be resolved, and never invents a day.
+    date_precision: month
+    category_separator: null
+    labelled: true
+    label_column: label
+    # Raw label values mapped to canonical 1=real / 0=fake.
+    label_values:
+      real: ["TRUE", "True", "true", "1", "real", "REAL"]
+      fake: ["FALSE", "False", "false", "0", "fake", "FAKE"]
+
+  # ------------------------------------------------------------------
+  # Cross-dataset numeric: Nifty 50 daily index, for drill-across / RQ6
+  # Verified 2026-10-01: 2008-01-21 to 2023-01-24, 3719 data rows.
+  # The commonly cited abulbasar/data copy stops at 2019-12-31 and is
+  # therefore unusable: it misses Jan-Jun 2020, the COVID window.
+  # ------------------------------------------------------------------
+  nifty:
+    enabled: true
+    name: Nifty 50 daily index prices
+    code: nifty
+    url: https://raw.githubusercontent.com/manishkr1754/NIFTY50_Data_Analysis_NSETOOLS_NSEPY_Python/main/nifty50.csv
+    filename: nifty50.csv
+    expected_bytes: null
+    citation: >-
+      Mirror of Yahoo Finance daily OHLCV for ^NSEI, redistributed in
+      github.com/manishkr1754/NIFTY50_Data_Analysis_NSETOOLS_NSEPY_Python
+    license: Unofficial redistribution of Yahoo Finance data
+    provenance: >-
+      Unofficial GitHub mirror of Yahoo Finance ^NSEI daily OHLCV. Not an
+      official NSE or BSE export, so treat levels as indicative. Authoritative
+      fallback is the NSE daily archive
+      https://archives.nseindia.com/content/indices/ind_close_all_DDMMYYYY.csv
+      which only reaches back to about 2018-09 and needs one request per day.
+    columns:
+      date: [Date, date]
+      open: [Open, open]
+      high: [High, high]
+      low: [Low, low]
+      close: [Close, close, Close/Last]
+      volume: [Volume, volume]
+      turnover: [Turnover, turnover]
+    # A price series has no headline text, so no text column is declared and
+    # the loader must not insist on one.
+    text_column: null
+    category_column: null
+    date_column: date
+    date_formats: ["%Y-%m-%d", "%d-%b-%y", "%d-%m-%Y", "%d-%b-%Y"]
+    date_precision: day
+    numeric_columns: [open, high, low, close, volume, turnover]
+    labelled: false
+    label_column: null
+    instrument: NIFTY50

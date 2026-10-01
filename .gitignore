@@ -1,0 +1,36 @@
+# --- virtualenv ---
+.venv/
+venv/
+env/
+
+# --- python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# --- raw data (large, re-downloadable, never committed) ---
+data/raw/
+!data/raw/.gitkeep
+
+# --- warehouse (large binary) ---
+warehouse/*.duckdb
+warehouse/*.duckdb.wal
+warehouse/*.wal
+
+# --- generated artefacts ---
+reports/facts.json
+reports/report.md
+logs/
+*.log
+!pip-install.log
+
+# --- editors / OS ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
