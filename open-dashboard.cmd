@@ -23,6 +23,14 @@ rem
 rem On failure we pause with the Python output left on screen. A window that
 rem closes on its own and takes the traceback with it is the worst outcome,
 rem because the missing text is exactly what you need to read.
+rem
+rem WHY IT INSTRUCTS RATHER THAN INSTALLS. A fresh clone has no virtualenv and
+rem no warehouse, because both are gitignored -- .venv/ and warehouse/*.duckdb
+rem -- so this file cannot possibly start a dashboard there. It could run
+rem `pip install -e .` itself, but that means executing whatever a clone's
+rem dependencies point at before a person has looked at them, and kicking off
+rem a multi-minute rebuild unasked. So we detect, print the exact commands, and
+rem stop. One extra step on a fresh machine; no surprise side effects on one.
 rem ===========================================================================
 
 setlocal enabledelayedexpansion
@@ -32,10 +40,38 @@ set "HOST=127.0.0.1"
 set "PORT=8000"
 set "URL=http://%HOST%:%PORT%"
 set "PY=.\.venv\Scripts\python.exe"
+set "DB=.\warehouse\dwm.duckdb"
 
+rem --- preflight: virtualenv -------------------------------------------------
 if not exist "%PY%" (
-    echo Could not find %PY%
-    echo Run this from the repo root, or create the virtualenv first.
+    echo A virtualenv is missing, so there is nothing to run the server with.
+    echo A fresh clone does not have one: .venv/ is gitignored.
+    echo.
+    echo Run these from this folder, once per machine:
+    echo.
+    echo     python -m venv .venv
+    echo     .venv\Scripts\pip install -e .
+    echo.
+    echo Then double-click this file again.
+    echo.
+    echo If `python` is not recognised, install Python 3.11+ and tick
+    echo "Add python.exe to PATH" during setup.
+    pause
+    exit /b 1
+)
+
+rem --- preflight: warehouse --------------------------------------------------
+if not exist "%DB%" (
+    echo The warehouse is missing, so the server has nothing to serve.
+    echo A fresh clone does not have one: warehouse\*.duckdb is gitignored.
+    echo.
+    echo Build it once per machine -- about 25 minutes:
+    echo.
+    echo     run_all.cmd
+    echo.
+    echo Then double-click this file again.
+    echo If your machine blocks PowerShell scripts, run_all.cmd is the plain
+    echo CMD wrapper and works regardless of execution policy.
     pause
     exit /b 1
 )
@@ -75,7 +111,8 @@ goto done
 echo.
 echo WARNING: no answer from %URL%/health after 30 seconds.
 echo The Python output above is the reason. Read it before closing this
-echo window -- the usual cause is a missing warehouse, fixed by run_all.cmd.
+echo window. The warehouse existed before we started, so if the error
+echo mentions a lock, another dwm process is probably already running.
 goto done
 
 :done
@@ -106,10 +143,14 @@ rem with no warehouse, which is when a client most needs telling. So a reachable
 rem server is NOT the same as a server holding findings, and a poll that only
 rem looked at the status code would miss that entirely.
 rem
-rem We still open the browser. A demo that starts with a visible warning beats
+We still open the browser. A demo that starts with a visible warning beats
 rem a demo that refuses to start, and hiding the problem behind a bare dashboard
 rem would imply it had data. Drop the quotes before matching so the search does
 rem not have to escape any.
+rem
+rem A missing warehouse is caught in preflight before the server starts, so
+rem reaching here with facts=false means the snapshot is stale or empty rather
+rem than absent -- still worth saying out loud.
 rem ---------------------------------------------------------------------------
 :report_body
 set "NOBODY=!BODY:"=!"
