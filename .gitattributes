@@ -8,6 +8,12 @@
 *.toml text
 *.txt  text
 
+# Batch files are the exception: cmd.exe is unreliable with LF-only line
+# endings, particularly `goto` and labels, so they are checked out as CRLF
+# whatever the platform. PowerShell is happy either way, so .ps1 stays LF.
+*.cmd  text eol=crlf
+*.bat  text eol=crlf
+
 # Binary-ish files that must never be rewritten
 *.csv  text eol=lf
 *.duckdb binary
