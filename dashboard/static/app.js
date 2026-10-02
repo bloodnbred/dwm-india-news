@@ -348,7 +348,11 @@ function table(columns, rows, opts = {}) {
 function olapColumns(rows, columns) {
   const raw = (columns && columns.length ? columns : Object.keys(rows[0] || {}));
   const hidden = new Set(["g_year", "g_topic", "g_band", "topic_key", "date_key"]);
-  const dateish = new Set(["year_month", "full_date", "date"]);
+  // Calendar fields are numbers but are not quantities. `year_no` formatted as
+  // "2,015" is worse than unformatted, and `month_no` as "12" is right by luck.
+  const dateish = new Set([
+    "year_month", "full_date", "date", "year_no", "year", "month_no", "month",
+  ]);
   const rateish = /(rate|share|pct|percent)/i;
   const moneyish = /^(sum_|mean_|measure_)/;
 
@@ -357,13 +361,23 @@ function olapColumns(rows, columns) {
     .map((key) => {
       const sample = rows.find((r) => r[key] !== null && r[key] !== undefined);
       const isNumber = typeof (sample ? sample[key] : null) === "number";
-      const num = isNumber && !dateish.has(key);
+      // Named `numeric`, not `num`. A local `const num` shadows the global
+      // formatter of the same name, and the closures below then call a boolean:
+      // "num is not a function", for every integer column. The *property*
+      // returned still has to be called `num`, because `table()` reads it as
+      // the right-align flag.
+      const numeric = isNumber && !dateish.has(key);
       let html = null;
-      if (num && rateish.test(key)) {
+      if (numeric && rateish.test(key)) {
         html = (r) => (r[key] == null ? "n/a" : pct(r[key], key.includes("share") ? 2 : 2));
-      } else if (num && moneyish.test(key)) {
-        html = (r) => num(r[key], 4);
-      } else if (num) {
+      } else if (numeric && moneyish.test(key)) {
+        // Not `num(r[key], 4)`: `num` takes one argument, so the precision was
+        // silently dropped and a sentiment sum of -1234.5678 rendered as
+        // -1,235. Formatting it here keeps the decimals a sum actually has.
+        html = (r) => (r[key] == null ? "n/a" : Number(r[key]).toLocaleString("en-US", {
+          minimumFractionDigits: 4, maximumFractionDigits: 4,
+        }));
+      } else if (numeric) {
         html = (r) => num(r[key]);
       }
       if (key === "is_trading_day") {
@@ -376,9 +390,9 @@ function olapColumns(rows, columns) {
       return {
         key,
         label: key.replace(/_/g, " "),
-        num,
+        num: numeric,
         html,
-        dim: !num && key !== "topic_name" && !dateish.has(key),
+        dim: !numeric && key !== "topic_name" && !dateish.has(key),
       };
     });
 }
@@ -1673,7 +1687,10 @@ function renderOlapResult(name, result) {
       ? `<div class="chart__body" id="olap-${esc(name)}"></div>`
       : "");
 
-  const chart = chartBlock ? `
+  // Named `chartHtml`, not `chart`: the global `chart()` renders a spec, and a
+  // local holding an HTML string under the same name is a trap for whoever
+  // adds a chart call to this function later.
+  const chartHtml = chartBlock ? `
     <figure class="chart">
       <figcaption class="chart__head">
         <div class="chart__title">${esc(name)} — the result</div>
@@ -1688,7 +1705,7 @@ function renderOlapResult(name, result) {
         connection.</div>
     </figure>` : "";
 
-  return header + reading + chart + table(columns, rows, {
+  return header + reading + chartHtml + table(columns, rows, {
     empty: "The operation returned no rows for these parameters.",
     caption: null,
   });

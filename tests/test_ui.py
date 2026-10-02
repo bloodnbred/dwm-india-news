@@ -32,7 +32,9 @@ The four families:
 from __future__ import annotations
 
 import json
+import os
 import re
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -181,6 +183,150 @@ def _js_without_comments(source: str) -> str:
     """
     without_block = re.sub(r"/\*.*?\*/", " ", source, flags=re.DOTALL)
     return re.sub(r"(?m)^\s*//.*$", " ", without_block)
+
+
+def test_no_local_declaration_shadows_a_global_helper() -> None:
+    """A shadowed global is a landmine that fires on one code path only.
+
+    `olapColumns` declared `const num = isNumber && ...`, shadowing the global
+    `num()` formatter. The closures below then called a boolean and threw
+    "num is not a function" — for every integer column, which is every column in
+    every OLAP result. The rate branch survived because it calls `pct()`, so the
+    panel half-worked.
+
+    `node --check` passes, no render test touches it, and the failure only appears
+    when someone clicks a card. Hence a static check.
+    """
+    code = _js_without_comments(_text(JS))
+    helpers = set(re.findall(r"^function (\w+)\(", code, flags=re.MULTILINE))
+    helpers |= set(re.findall(r"^async function (\w+)\(", code, flags=re.MULTILINE))
+    assert len(helpers) > 40, (
+        f"only {len(helpers)} helpers found; the pattern is probably wrong and "
+        f"this would pass vacuously"
+    )
+
+    locals_ = set(re.findall(r"\b(?:const|let)\s+(\w+)\s*=", code))
+    shadowed = sorted(helpers & locals_)
+    assert not shadowed, (
+        f"locals shadow top-level helpers: {shadowed}. A call to one of these "
+        f"inside that scope invokes the local instead, which fails on exactly "
+        f"one code path and nowhere else."
+    )
+
+
+def _extract_js(source: str, *names: str) -> str:
+    """Pull named top-level functions out of the script by brace matching.
+
+    Slicing the file between comment markers worked once and broke the moment a
+    marker moved, so the functions are located by name instead. Only the pure
+    helpers are taken; the DOM-heavy app body never runs, which is the point —
+    there is no browser here.
+    """
+    out = []
+    for name in names:
+        match = re.search(rf"^function {re.escape(name)}\s*\(", source, flags=re.MULTILINE)
+        assert match, f"{name} not found in app.js"
+        depth = 0
+        closed = None
+        for i in range(source.index("{", match.start()), len(source)):
+            if source[i] == "{":
+                depth += 1
+            elif source[i] == "}":
+                depth -= 1
+                if depth == 0:
+                    closed = i
+                    break
+        assert closed is not None, f"unbalanced braces extracting {name}"
+        out.append(source[match.start():closed + 1])
+    return "\n\n".join(out)
+
+
+def test_every_column_type_gets_a_working_formatter() -> None:
+    """All four `olapColumns` branches must produce a callable.
+
+    Only the rate branch was ever reachable while the others threw, so a test
+    that merely checked the function returned something would have passed. This
+    runs the real JavaScript under Node, calls every branch, and asserts the
+    output — the only way to know the formatter works without a browser.
+    """
+    helpers = _extract_js(_text(JS), "esc", "num", "pct", "olapColumns")
+    script = helpers + """
+const rows = [
+  {topic_name: 'Business', headline_count: 57532, sensational_rate: 0.0567,
+   sum_sentiment_compound: -1234.5678, sentiment_band: null,
+   is_trading_day: true, year_month: '2017-01', share_of_year: 0.4302,
+   year_no: 2017, month_no: 1}
+];
+process.stdout.write(JSON.stringify(
+  olapColumns(rows, Object.keys(rows[0]))
+    .map(c => ({key: c.key, num: c.num, out: c.html ? c.html(rows[0]) : null}))
+));"""
+    node = subprocess.run(
+        ["node", "-e", script], capture_output=True, text=True,
+        cwd=str(ROOT), timeout=60,
+    )
+    assert node.returncode == 0, f"node failed: {node.stderr[:500]}"
+    columns = {c["key"]: c for c in json.loads(node.stdout)}
+
+    assert set(columns) >= {
+        "topic_name", "headline_count", "sensational_rate", "share_of_year",
+        "sum_sentiment_compound", "sentiment_band", "is_trading_day", "year_month",
+    }, f"missing columns: {sorted(columns)}"
+
+    # Integers, thousands-separated. This is the branch that threw.
+    assert columns["headline_count"]["out"] == "57,532", columns["headline_count"]
+    assert columns["headline_count"]["num"] is True
+
+    # Rates as percentages.
+    assert columns["sensational_rate"]["out"] == "5.67%", columns["sensational_rate"]
+    assert columns["share_of_year"]["out"] == "43.02%", columns["share_of_year"]
+
+    # Sums keep four decimals.
+    assert columns["sum_sentiment_compound"]["out"] == "-1,234.5678", (
+        columns["sum_sentiment_compound"]
+    )
+
+    # A null band renders as a pill, not the word "null".
+    assert "no band" in columns["sentiment_band"]["out"], columns["sentiment_band"]
+
+    # Booleans render as pills.
+    assert "trading" in columns["is_trading_day"]["out"], columns["is_trading_day"]
+
+    # Dates are not numbers: neither formatted nor right-aligned.
+    assert columns["year_month"]["num"] is False
+
+    # A calendar year is a number but not a quantity. `2,015` is worse than
+    # `2015`, and it appeared in three of the ten tables before this was caught.
+    assert columns["year_no"]["out"] is None, columns["year_no"]
+    assert columns["year_no"]["num"] is False, columns["year_no"]
+    assert columns["month_no"]["out"] is None, columns["month_no"]
+
+    # Plain text has no formatter.
+    assert columns["topic_name"]["out"] is None
+    assert columns["topic_name"]["num"] is False
+
+
+def test_the_olap_renderer_only_reads_fields_the_endpoint_sends() -> None:
+    """`renderOlapResult` reads five fields; all five must be served.
+
+    A missing one does not throw in a way that names itself — it renders
+    `undefined` into the page, or silently omits the reading. Checked against
+    the live payload rather than a fixture.
+    """
+    import json as _json
+    import urllib.request
+
+    base = os.environ.get("DWM_API", "http://127.0.0.1:8000")
+    try:
+        with urllib.request.urlopen(f"{base}/query/roll_up", timeout=40) as response:
+            payload = _json.load(response)
+    except Exception as exc:  # noqa: BLE001 - any failure means "not running"
+        pytest.skip(f"needs the API: {exc}")
+
+    needed = set(re.findall(r"result\.(\w+)", _text(JS)))
+    assert needed, "the pattern found no result.* accesses; it is probably stale"
+    missing = sorted(needed - set(payload))
+    assert not missing, f"the renderer reads fields the endpoint does not send: {missing}"
 
 
 def test_every_wired_function_is_actually_called() -> None:
