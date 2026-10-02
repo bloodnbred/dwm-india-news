@@ -1167,6 +1167,78 @@ table.data code {
   white-space: nowrap;
 }
 
+/* ── OLAP: one click per operation, with a reading ────────────────────── */
+
+.olgrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+  gap: 9px;
+  margin-bottom: 26px;
+}
+
+.olop {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  padding: 11px 13px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: border-color 130ms var(--ease), background 130ms var(--ease),
+              transform 130ms var(--ease);
+}
+
+.olop:hover {
+  border-color: var(--accent);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.olop.is-active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.olop__name {
+  font-family: var(--mono);
+  font-size: .82rem;
+  font-weight: 600;
+  letter-spacing: -.01em;
+}
+
+.olop.is-active .olop__name { color: var(--accent); }
+
+.olop__params {
+  font-size: .69rem;
+  color: var(--faint);
+  line-height: 1.35;
+}
+
+/* The reading sits between the operation's description and its numbers, so the
+   answer is never below the evidence. */
+.olread {
+  border-left-color: var(--accent);
+  background: var(--accent-soft);
+  max-width: none;
+  font-size: .95rem;
+  line-height: 1.6;
+}
+
+.olread .callout__label { color: var(--accent); }
+
+.view code {
+  background: var(--surface-sunk);
+  padding: 1.5px 6px;
+  border-radius: 5px;
+  font-size: .88em;
+}
+
 /* ── loading and toast ────────────────────────────────────────────────── */
 
 .loading { padding: 70px 0; text-align: center; color: var(--muted); }

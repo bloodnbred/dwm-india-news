@@ -116,6 +116,7 @@ def test_every_element_id_the_js_reaches_for_exists() -> None:
         "ex-csv", "ex-results",
         "explore-series", "sr-topic", "sr-go", "sr-csv", "sr-results",
         "ol-op", "ol-topic", "ol-year", "ol-run", "ol-results",
+        "ol-grid", "ol-detail",
         "pipe-runs", "wh-tables", "how-tables",
         "report-body", "dl-report",
     }

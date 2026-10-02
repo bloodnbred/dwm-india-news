@@ -297,6 +297,23 @@ function mountCharts() {
   }
 }
 
+/** Render into a container, replacing its *contents*.
+ *
+ *  The bug this exists to prevent: the results panels used to do
+ *  `box.outerHTML = ...`, which deletes the element it is called on. The first
+ *  click worked and every later one threw, because `$("#ex-results")` came back
+ *  null — so every "Load" button in Explore worked exactly once and then went
+ *  dead, which is what "unresponsive" looked like.
+ *
+ *  `innerHTML` replaces the children and leaves the container in place. */
+function into(box, html) {
+  if (!box) {
+    toast("That panel is no longer on the page — reload and try again.");
+    return;
+  }
+  box.innerHTML = html;
+}
+
 function table(columns, rows, opts = {}) {
   if (!rows || !rows.length) {
     return `<div class="empty">${esc(opts.empty || "Nothing to show.")}</div>`;
@@ -315,6 +332,55 @@ function table(columns, rows, opts = {}) {
   return `<div class="tablewrap">${caption}<div class="tablescroll">
             <table class="data"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>
           </div></div>`;
+}
+
+/** Column definitions inferred from an OLAP result's own `columns` list.
+ *
+ *  The API already returns properly-named columns — `year_month`,
+ *  `topic_name`, `headline_count`, `sensational_rate`, `sentiment_band`. The
+ *  previous renderer threw them away and printed `JSON.stringify(row)` into a
+ *  single column, which is why every operation arrived as a wall of JSON.
+ *
+ *  Formatting is chosen by column name, not by column position: a cube has
+ *  headline_count, sensational_count, two sums and three surrogate group ids in
+ *  one row, and a rule keyed on position gets it wrong the moment an operation
+ *  gains a column. */
+function olapColumns(rows, columns) {
+  const raw = (columns && columns.length ? columns : Object.keys(rows[0] || {}));
+  const hidden = new Set(["g_year", "g_topic", "g_band", "topic_key", "date_key"]);
+  const dateish = new Set(["year_month", "full_date", "date"]);
+  const rateish = /(rate|share|pct|percent)/i;
+  const moneyish = /^(sum_|mean_|measure_)/;
+
+  return raw
+    .filter((c) => !hidden.has(c))
+    .map((key) => {
+      const sample = rows.find((r) => r[key] !== null && r[key] !== undefined);
+      const isNumber = typeof (sample ? sample[key] : null) === "number";
+      const num = isNumber && !dateish.has(key);
+      let html = null;
+      if (num && rateish.test(key)) {
+        html = (r) => (r[key] == null ? "n/a" : pct(r[key], key.includes("share") ? 2 : 2));
+      } else if (num && moneyish.test(key)) {
+        html = (r) => num(r[key], 4);
+      } else if (num) {
+        html = (r) => num(r[key]);
+      }
+      if (key === "is_trading_day") {
+        html = (r) => (r[key] ? '<span class="pill-yes">trading</span>'
+          : '<span class="pill-no">closed</span>');
+      }
+      if (key === "sentiment_band") {
+        html = (r) => (r[key] == null ? '<span class="pill-no">no band</span>' : esc(r[key]));
+      }
+      return {
+        key,
+        label: key.replace(/_/g, " "),
+        num,
+        html,
+        dim: !num && key !== "topic_name" && !dateish.has(key),
+      };
+    });
 }
 
 function tabs(names, active) {
@@ -943,7 +1009,7 @@ function exploreHeadlines() {
           try {
             const data = await api("/headlines", { topic, limit, offset });
             window._lastHeadlines = data.rows || [];
-            box.outerHTML = table(
+            into(box, table(
               [{ label: "Date", key: "publish_date" },
                { label: "Topic", key: "topic", dim: true },
                { label: "Headline", key: "headline_text" },
@@ -958,19 +1024,18 @@ function exploreHeadlines() {
                 caption: `${num(data.total)} in-window headlines` +
                   (topic ? ` for \`${topic}\`` : "") +
                   ` · showing ${num((data.rows || []).length)} from offset ${offset}` }
-            );
-            const cap = $("#explore-headlines .chart__cap");
-            if (cap) {
-              cap.insertAdjacentHTML("afterend",
-                '<div style="padding:12px 16px">' + callout("caution", "What this flag means",
-                  "`is_risk_signal` is a <b>style</b> flag on unlabelled headlines. It is not " +
-                  "a fake-news determination; nothing in this corpus is labelled.") + "</div>");
-            }
+            ) + '<div style="padding:12px 16px 0">' +
+              callout("caution", "What this flag means",
+                "`is_risk_signal` is a **style** flag on unlabelled headlines. It is not " +
+                "a fake-news determination; nothing in this corpus is labelled.") + "</div>");
           } catch (error) {
-            box.textContent = `Could not load: ${error.message}`;
+            into(box, `<div class="empty">Could not load: ${esc(error.message)}</div>`);
           }
         };
         $("#ex-go").addEventListener("click", load);
+        // Changing the filter reloads straight away, so a demo does not need
+        // the button. The button stays for the offset case.
+        select.addEventListener("change", load);
         $("#ex-csv").addEventListener("click", () => {
           const rows = window._lastHeadlines || [];
           if (!rows.length) { toast("Nothing loaded to download yet."); return; }
@@ -1018,7 +1083,7 @@ function exploreSeries() {
         const data = await api("/series/monthly", { topic });
         window._lastSeries = data.rows || [];
         const box = $("#sr-results");
-        box.outerHTML = `
+        into(box, `
           ${chart("__series", `Monthly volume — ${topic || "all topics"}`,
             "Notice how flat this is. That flatness is the RQ2 finding, and it is why no " +
             "month registers as a volume outlier.",
@@ -1029,10 +1094,11 @@ function exploreSeries() {
              { label: "Headlines", key: "headline_count", num: true, html: (r) => num(r.headline_count) },
              { label: "Risk-signal rate", key: "risk_signal_rate", num: true, html: (r) => pct(r.risk_signal_rate) }],
             (data.rows || []).slice(0, 60)
-          )}`;
+          )}`);
         renderSeries(data.rows || [], "series", topic || "all topics");
       };
       $("#sr-go").addEventListener("click", load);
+      select.addEventListener("change", load);
       $("#sr-csv").addEventListener("click", () => {
         const rows = window._lastSeries || [];
         if (!rows.length) { toast("Nothing loaded to download yet."); return; }
@@ -1107,24 +1173,11 @@ function exploreWarehouse() {
 }
 
 function exploreOlap() {
-  return `<div class="lede">Ten whitelisted OLAP operations. The operation is looked up by
-    name, never interpolated into SQL, and the connection is read-only.</div>
-    <div class="controls">
-      <div class="field">
-        <label class="field__label" for="ol-op">Operation</label>
-        <select id="ol-op"></select>
-      </div>
-      <div class="field">
-        <label class="field__label" for="ol-topic">topic</label>
-        <input id="ol-topic" type="text" placeholder="Business">
-      </div>
-      <div class="field">
-        <label class="field__label" for="ol-year">year</label>
-        <input id="ol-year" type="number" placeholder="2018">
-      </div>
-      <button class="btn btn--primary" id="ol-run">Run</button>
-    </div>
-    <div id="ol-results" class="empty">Choose an operation and press Run.</div>`;
+  return `<div class="lede">Ten whitelisted OLAP operations. Each one runs with its stored
+    defaults on a single click, and comes back with a chart, a plain-language reading
+    of the result, and the rows behind it. The operation is looked up by name, never
+    interpolated into SQL, and the connection is read-only.</div>
+    ${olapOperationCards()}`;
 }
 
 function explorePipeline() {
@@ -1539,42 +1592,130 @@ async function loadTableList(selector, caption) {
 
 async function wireExplore() {
   const tab = state.route.tab || "Headlines";
-  if (tab === "OLAP") await wireOlap();
   if (tab === "Pipeline") await wirePipeline();
 }
 
+/** Every OLAP operation, as a clickable worked example.
+ *
+ *  The recommended shape: one click per operation runs it with its stored
+ *  defaults and shows a chart, a plain-language reading of the result, and the
+ *  full table. A form you have to fill in before anything appears is worse in a
+ *  demonstration than a button that just works.
+ *
+ *  The topic and year fields stay as *overrides* — empty means "use the
+ *  defaults", which is the worked example. */
+function olapOperationCards() {
+  const host = `<div id="ol-grid" class="olgrid"></div>
+    <div id="ol-detail"></div>`;
+  setTimeout(async () => {
+    const grid = $("#ol-grid");
+    if (!grid) return;
+    try {
+      const { operations } = await api("/operations");
+      into(grid, (operations || []).map((o) => `
+        <button class="olop" data-op="${esc(o.name)}" type="button">
+          <span class="olop__name">${esc(o.name)}</span>
+          <span class="olop__params">${Object.keys(o.default_params || {}).length
+            ? esc(Object.entries(o.default_params).map(([k, v]) => `${k}=${v}`).join(", "))
+            : "no parameters needed"}</span>
+        </button>`).join(""));
+    } catch (error) {
+      into(grid, `<div class="empty">Could not load the operation list: ${esc(error.message)}</div>`);
+    }
+  }, 0);
+  return host;
+}
+
 async function wireOlap() {
-  const select = $("#ol-op");
-  if (!select) return;
-  try {
-    const { operations } = await api("/operations");
-    (operations || []).forEach((o) => {
-      const option = document.createElement("option");
-      option.value = o.name; option.textContent = o.name;
-      select.appendChild(option);
-    });
-  } catch (error) {
-    $("#ol-results").textContent = `Could not load operations: ${error.message}`;
+  const grid = $("#ol-grid");
+  if (!grid) return;
+  const detail = $("#ol-detail");
+
+  grid.addEventListener("click", async (event) => {
+    const button = event.target.closest("[data-op]");
+    if (!button) return;
+    const name = button.dataset.op;
+    $$(".olop", grid).forEach((b) => b.classList.toggle("is-active", b === button));
+    into(detail, '<div class="loading"><div class="loading__bar"></div><p>Running…</p></div>');
+    try {
+      const result = await api(`/query/${name}`);
+      into(detail, renderOlapResult(name, result));
+      mountInline(result.chart, `olap-${name}`);
+    } catch (error) {
+      into(detail, `<div class="empty">Could not run <code>${esc(name)}</code>: ${esc(error.message)}</div>`);
+    }
+  });
+}
+
+/** One OLAP result: what it is, what it found, what it looks like, and the rows.
+ *
+ *  Order matters. The description says what the operation *does*, the reading
+ *  says what this particular run *found*, the chart shows it and the table backs
+ *  it up. Previously there was no reading and no chart — just the rows, printed
+ *  as raw JSON, which is a correct cross-tabulation arriving as a wall of text. */
+function renderOlapResult(name, result) {
+  const rows = result.rows || [];
+  const columns = olapColumns(rows, result.columns);
+
+  const header = `
+    <div class="sectionhead"><div>
+      <h2><code>${esc(name)}</code></h2>
+      <p>${md(result.description || "")}</p>
+    </div></div>`;
+
+  const reading = result.reading
+    ? `<div class="callout callout--note olread">
+         <span class="callout__label">What this run found</span>
+         ${md(result.reading)}
+       </div>`
+    : "";
+
+  const spec = result.chart || {};
+  const chartBlock = spec.dwm_reason
+    ? `<div class="chart__error">${md(spec.dwm_reason)}</div>`
+    : (Object.keys(spec).length
+      ? `<div class="chart__body" id="olap-${esc(name)}"></div>`
+      : "");
+
+  const chart = chartBlock ? `
+    <figure class="chart">
+      <figcaption class="chart__head">
+        <div class="chart__title">${esc(name)} — the result</div>
+        <div class="chart__sub">Chosen automatically from the shape of the result:
+          a ranked bar, a time series or a stacked area. The rows below are the
+          same numbers.</div>
+      </figcaption>
+      ${chartBlock}
+      <div class="chart__cap">${num(rows.length)} rows ·
+        ${(result.columns || []).length} columns ·
+        produced by <code>GET /query/${esc(name)}</code> against a read-only
+        connection.</div>
+    </figure>` : "";
+
+  return header + reading + chart + table(columns, rows, {
+    empty: "The operation returned no rows for these parameters.",
+    caption: null,
+  });
+}
+
+/** Embed a spec that is not part of the served chart set, such as an OLAP
+ *  result. Kept separate from `mountCharts` because these arrive one at a time
+ *  on user action rather than all at once on load. */
+function mountInline(spec, id) {
+  const host = document.getElementById(id);
+  if (!host || !spec || spec.dwm_reason || !Object.keys(spec).length) return;
+  if (!window.vegaEmbed) {
+    into(host, '<div class="chart__error">The chart library did not load, so this '
+      + "result is shown as a table only. Every number is still there.</div>");
     return;
   }
-  $("#ol-run").addEventListener("click", async () => {
-    const box = $("#ol-results");
-    box.textContent = "Running…";
-    try {
-      const name = select.value;
-      const result = await api(`/query/${name}`, {
-        topic: $("#ol-topic").value || null,
-        year: $("#ol-year").value || null,
-      });
-      const rows = result.rows || result;
-      box.outerHTML = table(
-        [{ label: "Row", get: () => "" }, { label: "Payload", get: (r) => JSON.stringify(r) }],
-        Array.isArray(rows) ? rows.map((r, i) => ({ i, r })) : [],
-        { empty: "The operation returned no rows.", caption: `${name} · ${result.operation || ""}` }
-      );
-    } catch (error) {
-      box.textContent = `Could not run: ${error.message}`;
-    }
+  vegaEmbed(host, spec, {
+    actions: false,
+    renderer: "svg",
+    tooltip: { theme: state.theme === "dark" ? "dark" : "light" },
+    config: { background: "transparent" },
+  }).catch((error) => {
+    into(host, `<div class="chart__error">This chart failed to render (${esc(error.message)}).</div>`);
   });
 }
 
@@ -1583,7 +1724,7 @@ async function wirePipeline() {
   if (!host) return;
   try {
     const { runs } = await api("/audit", { limit: 20 });
-    host.outerHTML = table(
+    into(host, table(
       [{ label: "Stage", key: "stage" },
        { label: "Dataset", key: "dataset", dim: true },
        { label: "Rows read", key: "rows_read", num: true, html: (r) => num(r.rows_read) },
@@ -1593,7 +1734,7 @@ async function wirePipeline() {
       runs || [],
       { empty: "No pipeline runs recorded yet.",
         caption: "Every stage records what it read, what it loaded and what it rejected." }
-    );
+    ));
   } catch (error) {
     host.textContent = `Could not load the audit log: ${error.message}`;
   }

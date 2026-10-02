@@ -36,6 +36,8 @@ import duckdb
 from dwm.config import Settings
 from dwm.db import connect
 from dwm.logging_utils import get, human_int
+from dwm.olap.charts import olap_chart_spec
+from dwm.olap.readings import reading_for
 
 log = get("dwm.olap")
 
@@ -571,6 +573,12 @@ def run_operation(
     Split out from `run_olap` so the API can serve the same operations over a
     long-lived read-only connection. Two dispatch paths would be two chances
     for the CLI and the API to disagree about what an operation returns.
+
+    The result carries a plain-language `reading` alongside its rows. Every
+    operation returns correctly-named columns and useful numbers; a client that
+    renders only the rows shows the reader a table and leaves them to work out
+    what it means, which is half a job done. The reading is derived from the
+    rows just returned, so it cannot describe something else.
     """
     if operation not in OPERATIONS:
         raise KeyError(
@@ -580,7 +588,14 @@ def run_operation(
     kwargs.update(params or {})
     result = OPERATIONS[operation](con, **kwargs)
     log.info("%s: %s rows", result.operation, human_int(len(result.rows)))
-    return result.to_dict()
+    payload = result.to_dict()
+    payload["reading"] = reading_for(
+        operation, payload.get("rows"), payload.get("columns"),
+        payload.get("meta"), kwargs,
+    )
+    payload["chart"] = olap_chart_spec(operation, payload.get("rows") or [],
+                                       payload.get("columns") or [])
+    return payload
 
 
 def run_olap(
