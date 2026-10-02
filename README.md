@@ -126,6 +126,12 @@ warehouse to `warehouse/dwm.serve.duckdb` and serves that copy. The copy is
 byte-exact and takes 0.2 seconds. Refresh it with `dwm serve --resnapshot` or
 `POST /query/reload`.
 
+The dashboard has five sections: **Overview** leads with the study's
+conclusions, **Findings** is one page per research question with the answer
+stated before the evidence, **Explore** is the browse/warehouse/OLAP panel,
+**How it works** shows the guard rails, the design decisions and the four
+corrections this study made, and **Report** is the full document.
+
 ### Demonstrating it
 
 [`docs/DEMO.md`](docs/DEMO.md) is an ordered runbook: what to show, what to
@@ -146,7 +152,7 @@ subsequent runs skip the download.
 .\.venv\Scripts\ruff.exe check .
 ```
 
-265 tests, no network access required. They cover config loading, date parsing
+289 tests, no network access required. They cover config loading, date parsing
 with its precision rules, staging against the row-count gate, the CSV
 normalisation fallback, the CLI contract, the ETL stage's dedupe grain and
 window derivation, the feature stage's measure definitions, the Phase 3
@@ -238,8 +244,9 @@ dwm/
     store.py         read-only warehouse handle, cached results
     app.py           13 FastAPI endpoints
 dashboard/
-  app.py             Streamlit, 9 panels, calls the API and computes nothing
-  helpers.py         formatting, so the "no figure without a caution" rule is testable
+  app.py             Streamlit, 5 sections, calls the API and computes nothing
+  helpers.py         design system + formatting, so "no figure without a caveat"
+                     is testable without a browser
 tests/
 docs/
   01-ingest-etl.md         ingest design, data traps, measured data profile

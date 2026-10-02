@@ -8,14 +8,14 @@ reasoning behind each stage.
 
 | Phase | Gate | Result |
 |---|---|---|
-| 0 Scaffold | pytest runs, `--help` works | pass, 265 tests |
+| 0 Scaffold | pytest runs, `--help` works | pass, 289 tests |
 | 1 Ingest | staging row counts equal source | pass, zero rejects |
 | 2 ETL + dims | no null date keys, every category maps | pass |
 | 3 Features + facts | fact counts equal clean counts, keys unique | pass |
 | 4 OLAP | roll-up totals equal raw totals, cube equals fact | verified against the warehouse |
 | 5-6 Mining | metrics on test split only; seeds reproduce | pass, all 7 questions answered |
 | 7 Inference | every fact has a source; every caution reaches the report | pass, 15 of 15 guards |
-| 8 API + dashboard | read-only; every panel's data path exercised | pass, 13 endpoints, 9 panels |
+| 8 API + dashboard | read-only; every page rendered headlessly | pass, 14 endpoints, 21 dashboard tests |
 
 Everything reproduces from raw CSV to `report.md` in about six minutes:
 

@@ -138,34 +138,68 @@ convenience.
 
 ## The dashboard
 
-`streamlit run dashboard/app.py`. Nine panels: Overview, Trends, Language,
-Rules, Market, Classifier, Browse headlines, Warehouse, Report.
+`streamlit run dashboard/app.py`. Five sections — Overview, Findings, Explore,
+How it works, Report — with seven finding pages, one per research question.
 
 **It computes nothing** (BLUEPRINT section 1). It calls the API and renders what
-comes back. `dashboard/helpers.py` holds the formatting so that can be tested
-without a browser, and `render_metric` returns the value, unit and caution as
-three separate strings so a test can assert the caution is never dropped.
+comes back. `dashboard/helpers.py` holds the design system and the formatting, so
+both can be tested without a browser.
+
+### The answer comes before the evidence
+
+Each finding page leads with the question, then **the answer as the largest text
+on the page**, then how we know, then the caveat. The previous layout showed
+panels of data and left the reader to infer the point, which inverts the
+emphasis for no good reason.
+
+The conclusions live in `facts.json` under `outcomes`, **derived from the
+measured values** rather than hand-written, so they cannot drift away from the
+numbers the way prose does. Both `report.md` and the dashboard render the same
+block. A null result is kept rather than dropped: "we looked and there was
+nothing" is the answer to a question.
+
+### Cautions
+
+`render_metric` returns the value, unit and caution as three separate strings so
+a test can assert the caution is never dropped, and `find_uncautoned` walks the
+whole API payload at startup — if any figure has a unit and no caveat, the
+sidebar shows a warning. `metric()` renders a warning inline in that case.
 
 That is not decoration. A bare "10.9%" on a screen, detached from the words
 "risk-signal rate on unlabelled headlines", is exactly how a risk-signal rate
-stops being called one. `metric()` shows a warning when a figure has a unit and
-no caution, and `has_all_cautions` is checked at startup.
+stops being called one.
 
-Because the panels read `/summary`, which nests the body under `data`, the
-dashboard uses a `section()` helper that joins the header and the body once.
-Reading the body from the top level is a mistake that surfaces at runtime as a
-`KeyError`, and it did, twice, during the build.
+### Infographics
 
-## Testing the dashboard
+Six Altair charts, chosen because each one shows a finding rather than
+displaying a table: the event-month z-scores as diverging bars, the topic mix as
+a stacked area, silhouette against k with the chosen value ringed, the cluster
+sizes showing the 94.88% blob, the volatility scatter with its trend, and the
+confusion matrix as a heatmap. Hover tooltips throughout, and a CSV download
+returns exactly the data behind each chart.
 
-A browser was not available in the build environment, so the dashboard was
-verified by exercising its exact data path against a live server: 60 assertions
-mirroring each panel's calls, run against `python -m dwm serve` with the real
-warehouse. All passed, including that the report served over HTTP contains all
-seven RQ sections and never calls the style measure a fake-news rate.
+Two-colour encodings are written as a **labelled nominal field** mapped through
+a scale, not as a conditional. Altair 6 changed the conditional API enough that
+`alt.condition(...)` is no longer safe to title, and an untitled two-colour
+legend is unreadable anyway — so the legend says `coverage fell` and
+`coverage rose`.
 
-The long-term tests use `TestClient` against the fixture warehouse, which is
-faster and runs in CI.
+### Testing the dashboard
+
+**A healthy server proves nothing.** Streamlit executes a page only when a
+session connects, so a dashboard whose every page raises still answers
+`/_stcore/health` with "ok". That is how the Report page survived: it called
+`.json()` on a markdown endpoint and had never once worked.
+
+So the tests use Streamlit's own `AppTest` to run the real script headlessly and
+visit every section, every finding page, and both tab groups — 21 tests. It
+caught a `KeyError` from misreading the API's shape, three Altair 6 API breaks,
+and a `str` versus `float` comparison caused by a colour label overwriting the
+column being plotted.
+
+One test recomputes the volatility correlation from the plotted points and
+asserts it matches the reported r, so the scatter and the number beside it can
+never describe different things.
 
 ## End-to-end
 

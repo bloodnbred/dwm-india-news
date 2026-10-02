@@ -159,7 +159,7 @@ def summary() -> dict[str, Any]:
     """
     facts = _guard(store.load_facts)
     wanted = [
-        "corpus", "rq1_topic_mix", "rq2_bursts", "rq3_sensationalism",
+        "corpus", "outcomes", "rq1_topic_mix", "rq2_bursts", "rq3_sensationalism",
         "rq4_clusters", "rq5_association_rules", "rq6_market_association",
         "rq7_classifier", "guards", "honesty_rules",
     ]
@@ -167,6 +167,12 @@ def summary() -> dict[str, Any]:
     for key in wanted:
         block = facts.get(key)
         if block is None:
+            continue
+        # `outcomes` is a synthesis, not a measurement, so it has no single
+        # fact header. It is returned as bare data and the dashboard renders
+        # each outcome's own caution.
+        if key == "outcomes":
+            out[key] = block
             continue
         fact = block.get("fact") if isinstance(block, dict) else None
         out[key] = {
@@ -228,6 +234,17 @@ def tables() -> dict[str, Any]:
     """Every table with its row count, for the warehouse browser."""
     rows = _guard(store.table_counts)
     return {"tables": rows, "total_rows": sum(r["rows"] for r in rows)}
+
+
+@app.get("/market/daily", tags=["query"])
+def market_daily(topic: str | None = None) -> dict[str, Any]:
+    """Paired daily headline-volume and volatility points, for the RQ6 scatter.
+
+    The correlation is the finding, but a coefficient alone hides the shape of
+    the cloud behind it, and the shape is what makes the negative slope
+    believable. 1,235 points is small enough to return whole.
+    """
+    return _guard(store.market_daily, topic)
 
 
 @app.get("/audit", tags=["query"])

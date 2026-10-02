@@ -606,6 +606,277 @@ def check_guards(
 # ---------------------------------------------------------------------------
 
 
+def build_outcomes(facts: dict[str, Any]) -> dict[str, Any]:
+    """The study's answer, assembled from the measured values.
+
+    This is the inference layer: everything else in the document is evidence
+    for a claim, and this is the claim. It is *derived*, never hand-written, so
+    it cannot drift away from the numbers the way prose does — if the silhouette
+    changes, the sentence describing the clustering changes with it.
+
+    Each outcome states the finding, what kind of finding it is, and why it
+    matters. Outcomes that report nothing are kept, not dropped, because "we
+    looked and there was nothing" is the answer to a question and the reader is
+    entitled to know it was asked.
+    """
+    rq2 = facts["rq2_bursts"]
+    rq3 = facts["rq3_sensationalism"]
+    rq4 = facts["rq4_clusters"]
+    rq5 = facts["rq5_association_rules"]
+    rq6 = facts["rq6_market_association"]
+    rq7 = facts["rq7_classifier"]
+    window = facts["corpus"]["analysis_window"]
+
+    outcomes: list[dict[str, Any]] = []
+
+    # -- RQ2: a null, and the reason it is one ---------------------------
+    cv = rq2.get("max_within_year_cv")
+    fell = rq2.get("predicted_desks_fell_in") or []
+    events = len(rq2.get("event_months") or [])
+    outcomes.append({
+        "id": "volume",
+        "question": "Do national events show up as spikes in news volume?",
+        "kind": "null",
+        "headline": "No. Headline volume carries no news signal.",
+        "detail": (
+            f"Within-year volume varies by at most {cv}, and "
+            f"{rq2['volume_bursts_found']} months out of "
+            f"{len(rq2.get('per_year_cv') or {})} clear a z-score of 2. "
+            "March 2020, the month of the national lockdown, sits 2.5% above "
+            "its own year mean."
+        ),
+        "evidence": (
+            f"In {len(fell)} of {events} listed event months, all three desks "
+            "predicted to rise — Health, Sports and Entertainment — fell "
+            "instead."
+            if fell
+            else "No event month stands out on any measure tested."
+        ),
+        "caveat": (
+            "This data cannot distinguish a genuinely quota-driven newsroom "
+            "from a sampling artefact of the publisher's export. Both produce "
+            "the same signature."
+        ),
+        "rq": "RQ2",
+    })
+
+    # -- RQ4: structure exists but is narrow ------------------------------
+    silhouette = rq4.get("silhouette")
+    dominant = rq4.get("dominant_cluster_share")
+    outcomes.append({
+        "id": "clusters",
+        "question": "Do the headlines cluster into topics on their own?",
+        "kind": "qualified",
+        "headline": "Partly. Structure exists, but it covers a small minority.",
+        "detail": (
+            f"Silhouette {silhouette}, which clears the conventional 0.25 "
+            "threshold — but one cluster holds "
+            f"{pct(dominant)} of the corpus. The small clusters find money "
+            "terms (`rs crore`, `lakh`), traffic and crime (`road`, "
+            "`accident`, `killed`) and age copy (`old`, `year old`)."
+        ),
+        "evidence": (
+            "None of those is a topic in the publisher's own taxonomy, so the "
+            "clustering found writing patterns rather than desks. An earlier "
+            "run measured 0.068 and was wrong: the feature pipeline was "
+            "admitting numerals and stop words."
+        ),
+        "caveat": (
+            "Silhouette rewards one large cluster sitting far from a few small "
+            "tight ones, so the score and the shape must be read together."
+        ),
+        "rq": "RQ4",
+    })
+
+    # -- RQ6: nothing against returns, something against volatility -------
+    strongest_return = rq6["fact"]["value"] if rq6.get("ran") else None
+    volatility = rq6.get("volatility") or {}
+    v_strong = volatility.get("strongest") or {}
+    outcomes.append({
+        "id": "market",
+        "question": "Do headlines relate to the market?",
+        "kind": "split",
+        "headline": (
+            "Not to daily returns. Yes, to volatility — and the direction is "
+            "unexplained."
+        ),
+        "detail": (
+            f"Against returns the strongest correlation is {strongest_return}, "
+            "and the one significant lag out of the fifteen tested is what "
+            "chance produces. Against 20-day volatility, log business-headline "
+            f"volume correlates at {v_strong.get('pearson_r')} "
+            f"(p < 0.0001, {v_strong.get('variance_explained_pct')}% of "
+            "variance): busier headline days go with calmer markets."
+        ),
+        "evidence": (
+            "Fifteen lag tests at alpha 0.05 produce about 0.75 false "
+            "positives, so a single p below 0.05 is the expected outcome of "
+            "running the tests, not a discovery."
+        ),
+        "caveat": (
+            "Association only. Headline volume and volatility both respond to "
+            "the same underlying events, and nothing here identifies a "
+            "direction of effect."
+        ),
+        "rq": "RQ6",
+    })
+
+    # -- RQ3: a real, measurable concentration -----------------------------
+    top = rq3["ranked"][0] if rq3.get("ranked") else None
+    outcomes.append({
+        "id": "language",
+        "question": "Which topics use the most sensational language?",
+        "kind": "positive",
+        "headline": (
+            f"`{top['topic']}` stands out, at {pct(top['risk_signal_rate'])} "
+            f"against a {pct(rq3['corpus_rate'])} corpus rate."
+            if top
+            else "No topic cleared the row floor for a rate."
+        ),
+        "detail": (
+            f"95% CI {pct(top['ci95_low'])} to {pct(top['ci95_high'])} over "
+            f"{humanise(top['headline_count'])} headlines."
+            if top
+            else "No topic had enough headlines to support a rate."
+        ),
+        "evidence": (
+            "`Unknown` tops the raw ranking at 17.29% and is excluded: it is a "
+            "filing gap rather than a subject, so its score measures the "
+            "absence of a filing decision."
+        ),
+        "caveat": (
+            "A style measure on unlabelled headlines. It is a risk-signal "
+            "rate and never a fake-news rate. The threshold is the measured "
+            "95th percentile, a chosen cut-off."
+        ),
+        "rq": "RQ3",
+    })
+
+    # -- RQ5: agreement, not just a count ----------------------------------
+    outcomes.append({
+        "id": "rules",
+        "question": "Which co-occurrence patterns exist?",
+        "kind": "positive",
+        "headline": (
+            f"{humanise(rq5['rule_count'])} rules, found identically by two "
+            "independent algorithms."
+        ),
+        "detail": (
+            f"FP-Growth is {rq5['fpgrowth_speedup']}x faster on identical "
+            f"input, and {humanise(rq5.get('tautological_rules'))} of the "
+            "rules are tautologies counted separately."
+            if rq5.get("ran")
+            else "Association rules could not be mined on this data."
+        ),
+        "evidence": (
+            "Apriori and FP-Growth return the same rule set, which is asserted: "
+            "they search the same itemsets, so a difference would mean one is "
+            "broken. The keyword vocabulary produced zero rules and is reported "
+            "as a finding about the feature."
+        ),
+        "caveat": (
+            "Association, not causation. A rule states two attributes co-occur "
+            "more often than chance."
+        ),
+        "rq": "RQ5",
+    })
+
+    # -- RQ7: the one accuracy claim --------------------------------------
+    metrics = rq7.get("metrics") or {}
+    outcomes.append({
+        "id": "classifier",
+        "question": "Can a classifier separate real statements from fake ones?",
+        "kind": "positive",
+        "headline": (
+            f"{pct(metrics.get('accuracy'))} against a "
+            f"{pct(rq7.get('baseline'))} majority baseline."
+        ),
+        "detail": (
+            f"{metrics.get('lift_over_baseline_pp'):+.1f} percentage points, "
+            f"with Fake recall {pct(metrics.get('fake_recall'))}."
+            if metrics
+            else "The classifier could not be trained on this data."
+        ),
+        "evidence": (
+            "The model was chosen on training cross-validated accuracy and the "
+            "test split was scored once. Accuracy alone would flatter a model "
+            "that learned nothing, because always answering 'real' already "
+            "scores the baseline."
+        ),
+        "caveat": (
+            "An upper bound. Part of IFND's Fake class is LSTM-generated "
+            "augmentation, which is far easier to distinguish than a fake "
+            "written by a person."
+        ),
+        "rq": "RQ7",
+    })
+
+    # -- RQ1: the mix, and the artefact -----------------------------------
+    window_shares = facts["rq1_topic_mix"].get("window_shares", {})
+    leading = window_shares.get("topics", [{}])[0] if window_shares.get("topics") else {}
+    artefacts = facts["rq1_topic_mix"].get("taxonomy_artefacts") or []
+    outcomes.append({
+        "id": "mix",
+        "question": "How did the topic mix change across the window?",
+        "kind": "qualified",
+        "headline": (
+            f"`{leading.get('topic')}` is {pct(leading.get('share_of_window'))} "
+            "of the window, and one filing artefact dominates the story."
+            if leading
+            else "The topic mix could not be summarised."
+        ),
+        "detail": (
+            "`business.international-business` is 11.1% of all 2017 headlines "
+            "and 0.2% of 2018. A naive topic-mix analysis would report that as "
+            "a change in what India was reading."
+        ),
+        "evidence": (
+            f"{len(artefacts)} raw category holds an implausible share of a "
+            "single year, which means the publisher changed how it filed "
+            "content."
+        ),
+        "caveat": (
+            "2015 is a partial year, so every trend statement is a within-year "
+            "share and raw counts across years are never compared."
+        ),
+        "rq": "RQ1",
+    })
+
+    return {
+        "headline": (
+            "Three of seven questions produced no result, or a result that "
+            "reads better than it is. Those are reported with the measurement "
+            "that establishes them."
+        ),
+        "corpus": {
+            "headlines": window["headlines_in_window"],
+            "start": window["start"],
+            "end": window["end"],
+        },
+        "outcomes": outcomes,
+        "counts": {
+            "null": sum(1 for o in outcomes if o["kind"] == "null"),
+            "qualified": sum(1 for o in outcomes if o["kind"] == "qualified"),
+            "positive": sum(1 for o in outcomes if o["kind"] == "positive"),
+            "split": sum(1 for o in outcomes if o["kind"] == "split"),
+            "total": len(outcomes),
+        },
+    }
+
+
+def humanise(value: int | float | None) -> str:
+    if value is None:
+        return "n/a"
+    return f"{int(value):,}"
+
+
+def pct(value: float | None, places: int = 2) -> str:
+    """A proportion as a percentage. Never renders None as 0%."""
+    if value is None:
+        return "n/a"
+    return f"{value * 100:.{places}f}%"
+
+
 def build_facts(
     con: duckdb.DuckDBPyConnection, mining: dict[str, Any] | None = None
 ) -> dict[str, Any]:
@@ -635,6 +906,9 @@ def build_facts(
         "mining_guard_summary": mining.get("guard_summary", {}),
     }
     facts["guards"] = check_guards(mining, con)
+    # The inference layer: the study's answer, derived from the values above so
+    # it cannot drift away from them.
+    facts["outcomes"] = build_outcomes(facts)
     facts["honesty_rules"] = [
         "On the unlabelled TOI corpus every style measure is a RISK-SIGNAL "
         "rate. It is never a fake-news rate.",

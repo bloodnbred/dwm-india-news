@@ -282,6 +282,72 @@ def monthly_series(topic: str | None = None) -> list[dict[str, Any]]:
     ]
 
 
+def market_daily(topic: str | None = None) -> dict[str, Any]:
+    """Paired daily series for the volatility scatter.
+
+    RQ6's headline result is that log headline volume correlates with 20-day
+    volatility at r = -0.28, which is a claim about a cloud of points. A
+    correlation coefficient on its own hides the shape, so the dashboard needs
+    the points behind it.
+
+    **The topic defaults to the one the correlation was actually computed on**,
+    and the join is built the same way `dwm/mining/market.py` builds it: one row
+    per trading day for a single topic, not one row per day-topic pair. Without
+    that the query returns ~13,000 rows mixing every desk, which is a different
+    quantity and would not reproduce the reported coefficient.
+    """
+    from dwm.mining import load_mining_config
+
+    if topic is None:
+        topic = str(load_mining_config().get("market", {}).get("topic", "Business"))
+    escaped = topic.replace("'", "''")
+    con = connection()
+    rows = con.execute(
+        f"""
+        WITH daily AS (
+            SELECT
+                c.date_key,
+                sum(c.headline_count)         AS n,
+                sum(c.sum_sentiment_compound) AS sum_sent
+            FROM cube_day_topic c
+            JOIN dim_topic t ON t.topic_key = c.topic_key
+            WHERE t.topic_name = '{escaped}'
+            GROUP BY 1
+        )
+        SELECT
+            m.trade_date,
+            daily.n,
+            m.volatility_20d,
+            m.return_pct,
+            daily.sum_sent / nullif(daily.n, 0) AS mean_sentiment
+        FROM fact_market_daily m
+        JOIN daily ON daily.date_key = m.date_key
+        WHERE m.volatility_20d IS NOT NULL AND daily.n > 0
+        ORDER BY m.trade_date
+        """
+    ).fetchall()
+    points = [
+        {
+            "trade_date": str(r[0]),
+            "headline_count": int(r[1]),
+            "volatility_20d": float(r[2]),
+            "return_pct": float(r[3]) if r[3] is not None else None,
+            "mean_sentiment": float(r[4]) if r[4] is not None else None,
+        }
+        for r in rows
+    ]
+    return {
+        "topic": topic,
+        "points": points,
+        "observations": len(points),
+        "note": (
+            "x is the natural log of that topic's daily headline count, which is "
+            "exactly what the reported correlation was computed on. A mean of "
+            "logs would differ slightly from the log of a mean."
+        ),
+    }
+
+
 def table_counts() -> list[dict[str, Any]]:
     """Every table and its row count, for the warehouse browser."""
     con = connection()

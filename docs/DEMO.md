@@ -263,19 +263,45 @@ inference gate: 15 of 15 checks passed
 
 ---
 
-## 8. The dashboard's honesty mechanism (1 min)
+## 8. The dashboard: answer first, and the honesty mechanism (2 min)
 
-Back to **:8501**. Any panel with a figure, e.g. Language.
+Back to **:8501**. Start on **Overview** and scroll.
 
-Point at the amber ⚠️ boxes under the numbers.
+> "Every page leads with its answer, not its data. Each outcome carries the
+> question, the answer as the largest text on the page, how we know, and the
+> caveat — the caveat sits with the number rather than in a footnote."
+
+Show the metric tiles, then the outcomes in order. Point out that the null
+result is **present** rather than dropped: "we looked and there was nothing" is
+the answer to a question, and the reader is entitled to know it was asked.
+
+Now **Findings**, and click through two or three. The **Volume and events** page
+is the strongest: the diverging bars show Health, Sports and Entertainment all
+falling during the pandemic months, and the legend says so in words rather than
+leaving two unexplained colours.
+
+Then **How it works** -> **Corrections**:
+
+> "This is the part I'm most pleased with. Four things this study got wrong,
+> each of which had looked convincingly like a finding. The clustering one
+> especially: I reported 0.068 as 'these headlines have no topic structure', and
+> the fault was my feature engineering admitting numerals and stop words, not
+> the data. Fixing it gave 0.2582 — and the report states the correction rather
+> than quietly replacing the number."
+
+Open the sidebar's **honesty rules** expander:
 
 > "Those cautions travel with the API response and the dashboard renders them
-> under every figure. It also **refuses to render a figure that has a unit and
-> no caution** — it shows a warning instead. Because a bare '10.9%' on a
-> screen, detached from 'risk-signal rate on unlabelled headlines', is exactly
-> how a risk-signal rate stops being called one."
+> under every figure. It also refuses to render a figure that has a unit and no
+> caution, and at startup it walks the whole payload looking for one — if it
+> found any, the warning would appear in the sidebar. A bare '10.9%' detached
+> from 'risk-signal rate on unlabelled headlines' is exactly how a risk-signal
+> rate stops being called one."
 
----
+If asked how the interactivity works, note that the charts are Altair with hover
+tooltips, the topic charts are click-to-filter, and the CSV download under
+**Explore** returns exactly the data behind each chart. Also worth saying: the
+dashboard computes nothing, so it cannot disagree with the report.
 
 ## 9. Reproducibility (2 min)
 
