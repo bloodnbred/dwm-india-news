@@ -4,7 +4,7 @@ A data-warehousing and mining study built on 3,297,172 Times of India headlines,
 
 **Analysis window** 2015-06-30 to 2020-06-30, which is 6 calendar years. The window is derived from the last publish date in the corpus, not hard-coded, and it is applied as a **flag rather than a filter**: 2,041,489 out-of-window headlines stay in the warehouse and remain queryable.
 
-*Generated 2026-10-02T08:44:48 from `facts.json` (mining run 20261002T065409Z).*
+*Generated 2026-10-02T09:27:32 from `facts.json` (mining run 20261002T092603Z).*
 
 > **Two of the seven findings are negative, and they are the most
 > informative results in this study.** Monthly headline volume does not
@@ -339,7 +339,7 @@ clustering found is a set of **writing patterns**, not desks.
 **Stability.** The same documents are clustered twice with different K-Means seeds, so only the initialisation varies. High agreement means the partition is a property of the data; low agreement means the clusters are an artefact of the starting points. Agreement was 0.9669 on the same documents refit with two different K-Means seeds.
 
 
-> **Read this before quoting the number.** Read this with the cluster sizes, not alone. Silhouette rewards a large cluster sitting far from a few small tight ones, and that is the shape here: most headlines are undifferentiated while a small topical minority is cleanly separated. The score also depends entirely on the TF-IDF settings — an earlier run that admitted numerals and stop words measured 0.068 on the same data.
+> **Read this before quoting the number.** Read this with the cluster sizes, not alone. Silhouette rewards a large cluster sitting far from a few small tight ones, and that is the shape here: most headlines are undifferentiated while a small topical minority is cleanly separated. The score also depends entirely on the TF-IDF settings: an earlier run that admitted numerals and stop words measured 0.068 on the same data.
 
 ## 6. RQ5 — Which co-occurrence patterns exist?
 
@@ -349,9 +349,9 @@ clustering found is a set of **writing patterns**, not desks.
 
 | algorithm | rules | time |
 |---|---|---|
-| Apriori | 644 | 0.9349 s |
-| FP-Growth | 644 | 1.4344 s |
-| **speedup** | — | **0.65×** |
+| Apriori | 644 | 0.9152 s |
+| FP-Growth | 644 | 1.3258 s |
+| **speedup** | — | **0.69×** |
 
 
 **Rule sets identical: True.** Both algorithms were run
@@ -648,4 +648,4 @@ presentable.
   part that inflates the classifier's apparent skill.
 ---
 
-Generated 2026-10-02 14:14 from `facts.json` (mining run 20261002T065409Z). Every figure in this document is rendered from a fact that records its own source. No language model was involved in producing it.
+Generated 2026-10-02 14:57 from `facts.json` (mining run 20261002T092603Z). Every figure in this document is rendered from a fact that records its own source. No language model was involved in producing it.

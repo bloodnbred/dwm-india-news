@@ -362,6 +362,12 @@ function pageOverview() {
       "“we looked and there was nothing” is the answer to a question, and the reader " +
       "is entitled to know it was asked.")}
 
+    ${chart("topic_share", "What the corpus is made of",
+      "Share of the whole window by topic. “a where, not a what” marks the city desks — " +
+      "`Local` alone is 70% of the corpus.",
+      "Places and subjects are separated because comparing a city desk against a " +
+      "subject as if they matched would be meaningless. They are 70% and 30% of the " +
+      "corpus respectively.")}
     ${chart("rq1_topic_mix", "The topic mix over time",
       "Share of each year's headlines, within-year, because 2015 is a partial year and " +
       "raw counts are not comparable across years.",
@@ -483,10 +489,21 @@ function pageFindings(sub) {
           "The score and the shape must be read together. Silhouette rewards one large " +
           "cluster sitting far from a few small tight ones — which is exactly what the " +
           "next chart shows.")}
+        ${chart("rq4_projection", "The clustering, as a picture",
+          "Every sampled headline projected onto the first two components of the space " +
+          "K-Means actually clustered — the same space the silhouette was measured on.",
+          "The dominant cluster is thinned so the small groups stay visible, which makes it " +
+          "over-represented here relative to its share. The cluster-size chart carries the " +
+          "true proportions. The three small clusters sit apart from the cloud: that is the " +
+          "separation the silhouette is scoring.")}
         ${chart("rq4_cluster_sizes", "Where the headlines actually went",
           "Share of the sample per cluster. The point of this chart is the shape, not the ranking.",
           "The small clusters find writing patterns — money terms, traffic and crime, age " +
           "copy — rather than topics in the publisher's own taxonomy.")}
+        ${chart("rq4_cluster_topics", "Which publisher topics dominate each cluster",
+          "The evidence that these clusters are not the publisher's desks.",
+          "Every cluster is dominated by `Local`, because 70% of the corpus is. The clusters " +
+          "separate on vocabulary, not on filing.")}
         ${callout("note", "The concentration caveat", data.concentration_note || "")}
         <details class="card">
           <summary style="cursor:pointer;font-weight:600">The correction this section replaces</summary>
@@ -526,6 +543,11 @@ function pageFindings(sub) {
           "Apriori and FP-Growth search the same itemsets. A difference would mean one is " +
           "broken, not interesting.")}
         ${callout("note", "Agreement is asserted, not discovered", data.redundancy_note || "")}
+        ${chart("rq5_lift", "The shape of the whole rule set",
+          "Every mined rule, binned by lift. A ranked table shows the best rules; a " +
+          "histogram shows whether the top of that list is a real effect or the tail of a " +
+          "distribution.",
+          data.lift_distribution_note || "")}
         ${sectionHead("The strongest non-trivial rules, by lift")}
         ${table(
           [{ label: "If", get: (r) => (r.antecedent || []).join(" + "), html: (r) => md((r.antecedent || []).join(" + ")) },
@@ -570,6 +592,11 @@ function pageFindings(sub) {
           "The fitted line is the reported correlation, drawn on the same points.",
           "Busier headline days go with calmer markets. The sign is the interesting part, " +
           "and this data cannot explain it.")}
+        ${chart("rq6_returns", "Headline volume against daily returns",
+          "The same volume series against the index's daily return — the null result, drawn.",
+          "This is what “no relationship” looks like: a full, unstructured cloud. A " +
+          "negative result with no chart is indistinguishable from a section that failed, " +
+          "so it is plotted.")}
         ${sectionHead("Against daily returns there is nothing")}
         ${table(
           [{ label: "Measure", get: (r) => r.measure },
@@ -1195,13 +1222,24 @@ function renderFooter() {
     `Generated ${esc(shortDate(p.generated_at))} · run ${esc(p.mining_run_id || "—")}.`;
 }
 
+/** Read the hash into `state.route`.
+ *
+ *  The shape differs by page: findings carry a question *and* may carry a tab,
+ *  while Explore and How it works carry only a tab. Reading the second segment
+ *  unconditionally as `sub` meant the tab never landed in `tab`, and every tab
+ *  in How it works silently rendered the first panel no matter what was
+ *  clicked. */
 function routeFromHash() {
   const raw = (window.location.hash || "#/overview").replace(/^#\/?/, "");
-  const [page, sub, tab] = raw.split("/");
+  const [page, second, third] = raw.split("/");
+  const valid = SECTIONS.some((s) => s.id === page) ? page : "overview";
+  const isFinding = valid === "findings";
   state.route = {
-    page: SECTIONS.some((s) => s.id === page) ? page : "overview",
-    sub: sub || (page === "findings" ? "volume" : null),
-    tab: tab ? decodeURIComponent(tab) : null,
+    page: valid,
+    sub: isFinding ? (second || "volume") : null,
+    tab: isFinding
+      ? (third ? decodeURIComponent(third) : null)
+      : (second ? decodeURIComponent(second) : null),
   };
 }
 

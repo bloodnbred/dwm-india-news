@@ -122,10 +122,19 @@ def _axis(t: dict[str, Any], title: str | None = None, **over: Any) -> dict[str,
 
 
 def _config(t: dict[str, Any]) -> dict[str, Any]:
-    """Vega-Lite config block: transparent plot, quiet legends, no toolbar."""
+    """Vega-Lite config block: transparent plot, quiet legends, no toolbar.
+
+    `autosize: fit` is what makes a chart fill its frame. Without it Vega uses
+    a fixed 200px width and every chart on the dashboard renders as a small
+    square in the corner of its card — which is exactly what happened on the
+    first build, and it looks like missing data rather than a sizing mistake.
+    It has to be paired with `width="container"` on the chart itself; neither
+    works alone.
+    """
     return {
         "background": "transparent",
         "view": {"stroke": "transparent"},
+        "autosize": {"type": "fit", "contains": "padding"},
         "axis": _axis(t),
         "legend": {
             "labelFontSize": 11,
@@ -175,7 +184,17 @@ def _sorted_unique(values: list[str]) -> list[str]:
 
 
 def _spec(chart: Any, t: dict[str, Any], height: Any = 280) -> dict[str, Any]:
-    return chart.properties(height=height).configure(**_config(t)).to_dict()
+    """Finalise a chart: fill the frame, apply the shared config, serialise.
+
+    `width="container"` is what makes the chart fill its card. Set here rather
+    than at each call site so a chart cannot be added with the default 200px
+    width by mistake — which is precisely the bug this replaced.
+    """
+    return (
+        chart.properties(width="container", height=height)
+        .configure(**_config(t))
+        .to_dict()
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -430,6 +449,108 @@ def rq4_cluster_sizes(facts: dict[str, Any], t: dict[str, Any]) -> dict[str, Any
     return _spec(chart, t, height=max(180, 42 * len(rows)))
 
 
+def rq4_projection(facts: dict[str, Any], t: dict[str, Any]) -> dict[str, Any]:
+    """The clustering as a picture: 4,500 headlines in the LSA plane.
+
+    A silhouette score and a bar chart of cluster sizes are both summaries, and
+    neither shows what the clusters *are*. This plots the space K-Means actually
+    clustered, so the reader can see the small topical groups sitting apart from
+    the dominant cloud rather than being told that they do.
+
+    The dominant cluster is deliberately thinned and the small ones shown in
+    full — otherwise 57,000 identical-coloured points bury everything. That
+    makes the large cluster over-represented here, and the caption says so; the
+    cluster-size chart carries the true proportions.
+    """
+    block = facts["rq4_clusters"]
+    projection = block.get("projection") or {}
+    points = projection.get("points") or []
+    clusters = projection.get("clusters") or []
+    if len(points) < 50:
+        return {}
+
+    # Ordered by descending size, so the dominant cloud is drawn first and the
+    # small groups land on top of it rather than underneath.
+    ordered = sorted(clusters, key=lambda c: -c["size"])
+    rank = {c["cluster_id"]: i for i, c in enumerate(ordered)}
+    labels = {
+        c["cluster_id"]: (
+            f"cluster {c['cluster_id']} - {c['size']:,} headlines" +
+            (" (sampled)" if c["sampled"] else "")
+        )
+        for c in ordered
+    }
+    for point in points:
+        point["group"] = labels.get(point["c"], str(point["c"]))
+        point["rank"] = rank.get(point["c"], 0)
+
+    # Opacity falls as the cluster gets smaller so a 775-member group is still
+    # visible against a 57,000-member cloud.
+    opacities = [0.16, 0.55, 0.7, 0.8, 0.8, 0.85, 0.85, 0.9]
+    layers = []
+    for index, cluster in enumerate(ordered):
+        members = [p for p in points if p["c"] == cluster["cluster_id"]]
+        colour = SERIES[index % len(SERIES)]
+        layers.append(
+            alt.Chart(alt.Data(values=members))
+            .mark_circle(size=13, opacity=opacities[index % len(opacities)], color=colour)
+            .encode(
+                x=alt.X("x:Q", axis=_axis(t, "LSA component 1")),
+                y=alt.Y("y:Q", axis=_axis(t, "LSA component 2")),
+                tooltip=[
+                    alt.Tooltip("group:N"),
+                    alt.Tooltip("x:Q", title="LSA 1", format=".3f"),
+                    alt.Tooltip("y:Q", title="LSA 2", format=".3f"),
+                ],
+            )
+        )
+    return _spec(alt.layer(*layers), t, height=420)
+
+
+def rq4_cluster_topics(facts: dict[str, Any], t: dict[str, Any]) -> dict[str, Any]:
+    """Which publisher topics dominate each cluster.
+
+    The evidence that these clusters are not the publisher's desks. Every cluster
+    is dominated by `Local`, because 70% of the corpus is, and the clusters
+    separate on vocabulary rather than on filing.
+    """
+    clusters = facts["rq4_clusters"].get("clusters", [])
+    rows = []
+    for cluster in clusters:
+        for entry in (cluster.get("dominant_supplied_topics") or [])[:4]:
+            rows.append({
+                "cluster": f"cluster {cluster['cluster_id']}",
+                "topic": entry.get("topic", "n/a"),
+                "share": entry.get("share") or 0.0,
+                "count": entry.get("count") or 0,
+            })
+    if not rows:
+        return {}
+    clusters_sorted = _sorted_unique([r["cluster"] for r in rows])
+    topics = _sorted_unique([r["topic"] for r in rows])
+    chart = (
+        alt.Chart(alt.Data(values=rows))
+        .mark_bar(cornerRadiusEnd=3)
+        .encode(
+            y=alt.Y("cluster:N", sort=clusters_sorted, axis=_axis(t, None, gridColor=None)),
+            x=alt.X("share:Q", axis=_axis(t, "share of that cluster's members")),
+            color=alt.Color(
+                "topic:N",
+                scale=alt.Scale(domain=topics, range=SERIES),
+                legend=alt.Legend(orient="bottom", columns=5, title=None),
+            ),
+            order=alt.Order("topic:N"),
+            tooltip=[
+                "cluster:N",
+                "topic:N",
+                alt.Tooltip("count:Q", format=","),
+                alt.Tooltip("share:Q", format=".1%"),
+            ],
+        )
+    )
+    return _spec(chart, t, height=max(180, 46 * len(clusters_sorted)))
+
+
 # ---------------------------------------------------------------------------
 # RQ5 - algorithm timing
 # ---------------------------------------------------------------------------
@@ -474,8 +595,134 @@ def rq5_timing(facts: dict[str, Any], t: dict[str, Any]) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
+def rq6_returns(points: list[dict[str, Any]], t: dict[str, Any],
+                stats: dict[str, Any]) -> dict[str, Any]:
+    """Headline volume against daily returns — the null result, as a picture.
+
+    RQ6's most important output is a negative one, and a negative result with no
+    chart is indistinguishable from a section that failed. Drawing the cloud
+    shows what "no relationship" actually looks like: a full, unstructured
+    scatter rather than an absence.
+    """
+    import math
+
+    rows = []
+    for p in points:
+        count = p.get("headline_count")
+        ret = p.get("return_pct")
+        if count and ret is not None and count > 0:
+            rows.append({"x": math.log(count), "y": ret,
+                         "date": p.get("trade_date", "")})
+    if len(rows) < 50:
+        return {}
+    n = len(rows)
+    mean_x = sum(r["x"] for r in rows) / n
+    mean_y = sum(r["y"] for r in rows) / n
+    sxx = sum((r["x"] - mean_x) ** 2 for r in rows)
+    sxy = sum((r["x"] - mean_x) * (r["y"] - mean_y) for r in rows)
+    slope = (sxy / sxx) if sxx else 0.0
+    intercept = mean_y - slope * mean_x
+    fit = [{"x": r["x"], "fit": intercept + slope * r["x"]} for r in rows]
+
+    zero = (
+        alt.Chart(alt.Data(values=[{"y": 0.0}]))
+        .mark_rule(color=t["axis"], strokeWidth=1)
+        .encode(y=alt.Y("y:Q", axis=_axis(t)))
+    )
+    cloud = (
+        alt.Chart(alt.Data(values=rows))
+        .mark_circle(size=14, opacity=0.25, color=t["muted"])
+        .encode(
+            x=alt.X("x:Q", axis=_axis(t, "log headline volume per day")),
+            y=alt.Y("y:Q", axis=_axis(t, "daily return (%)")),
+            tooltip=[
+                "date:T",
+                alt.Tooltip("y:Q", title="return %", format=".2f"),
+            ],
+        )
+    )
+    line = (
+        alt.Chart(alt.Data(values=fit))
+        .mark_line(strokeWidth=2.5, color=t["negative"], strokeDash=[6, 4])
+        .encode(x=alt.X("x:Q", axis=_axis(t)), y=alt.Y("fit:Q", axis=_axis(t)))
+    )
+    r = stats.get("pearson_r")
+    spec = _spec(alt.layer(zero, cloud, line), t, height=320)
+    if isinstance(r, (int, float)):
+        spec["dwm_caption"] = f"r = {r:+.4f}"
+    return spec
+
+
+def topic_share(facts: dict[str, Any], t: dict[str, Any]) -> dict[str, Any]:
+    """Share of the window by topic, places and subjects labelled separately.
+
+    `Local` is 70% of the corpus and is a *where*, not a *what*. Splitting the
+    bar by `topic_group` keeps a city desk from reading as a subject.
+    """
+    topics = ((facts["rq1_topic_mix"].get("window_shares") or {}).get("topics")) or []
+    rows = [t_ for t_ in topics if t_.get("share_of_window") is not None][:14]
+    if not rows:
+        return {}
+    rows = _label_state(
+        rows, "share_of_window", lambda v: v > 0.5,
+        "a where, not a what", "a subject",
+    )
+    names = _sorted_unique([r["topic"] for r in rows])
+    chart = (
+        alt.Chart(alt.Data(values=rows))
+        .mark_bar(cornerRadiusEnd=4)
+        .encode(
+            y=alt.Y("topic:N", sort=names, axis=_axis(t, None, gridColor=None)),
+            x=alt.X("share_of_window:Q", axis=_axis(t, "share of the window")),
+            color=_named("a where, not a what", "a subject", t["muted"], t["accent"]),
+            tooltip=[
+                "topic:N",
+                "topic_group:N",
+                alt.Tooltip("headline_count:Q", format=","),
+                alt.Tooltip("share_of_window:Q", format=".2%"),
+            ],
+        )
+    )
+    return _spec(chart, t, height=max(220, 26 * len(rows)))
+
+
+def rq5_lift_distribution(facts: dict[str, Any], t: dict[str, Any]) -> dict[str, Any]:
+    """The lift distribution across every mined rule.
+
+    A ranked table shows the best rules; a histogram shows the shape, which is
+    the thing that says whether the top of the list is a real effect or the tail
+    of a distribution that mostly sits at 1.0.
+
+    The bins are computed in the mining stage over all 644 rules, not here: the
+    report stores only the top eight informative rules, which is enough to draw
+    the strongest and far too few to show a distribution.
+    """
+    block = facts["rq5_association_rules"]
+    rows = block.get("lift_distribution") or []
+    if len(rows) < 3:
+        return {}
+    rows = _label_state(
+        rows, "low", lambda v: v > 1.0, "lift above chance", "lift at chance"
+    )
+    # Ordered by the bin's own lower edge, not alphabetically: "10 or more" would
+    # otherwise sort before "1 to 1.1".
+    order = [r["range"] for r in sorted(rows, key=lambda r: r["low"])]
+    chart = (
+        alt.Chart(alt.Data(values=rows))
+        .mark_bar(cornerRadiusEnd=3)
+        .encode(
+            x=alt.X("range:N", sort=order,
+                    axis=_axis(t, "lift", labelAngle=-30, gridColor=None)),
+            y=alt.Y("count:Q", axis=_axis(t, "rules")),
+            color=_named("lift above chance", "lift at chance", t["accent"], t["muted"]),
+            tooltip=["range:N", alt.Tooltip("count:Q", format=",d")],
+        )
+    )
+    return _spec(chart, t, height=260)
+
+
 def rq6_volatility(points: list[dict[str, Any]], t: dict[str, Any],
-                    stats: dict[str, Any]) -> dict[str, Any]:
+                   stats: dict[str, Any]) -> dict[str, Any]:
     """Headline volume against 20-day volatility.
 
     A correlation coefficient on its own hides the shape of the cloud, and the
@@ -644,19 +891,30 @@ def build_charts(
     """
     t = theme(theme_name)
     rq6 = facts.get("rq6_market_association") or {}
-    stats = ((rq6.get("volatility") or {}).get("strongest")) or {}
+    vol_stats = ((rq6.get("volatility") or {}).get("strongest")) or {}
+    # The returns correlation is not a `strongest` block: it is reported as the
+    # section's own fact, because "the strongest of fifteen lags" is not a
+    # meaningful summary of a null.
+    return_fact = (rq6.get("fact") or {}).get("value")
     charts: dict[str, Any] = {
         "rq2_event_z": rq2_event_z(facts, t),
         "rq1_topic_mix": rq1_topic_mix(facts, t),
         "rq3_topic_rates": rq3_topic_rates(facts, t),
         "rq3_trend": rq3_trend(facts, t),
         "rq4_silhouette": rq4_silhouette(facts, t),
+        "rq4_projection": rq4_projection(facts, t),
         "rq4_cluster_sizes": rq4_cluster_sizes(facts, t),
+        "rq4_cluster_topics": rq4_cluster_topics(facts, t),
         "rq5_timing": rq5_timing(facts, t),
+        "rq5_lift": rq5_lift_distribution(facts, t),
         "rq7_confusion": rq7_confusion(facts, t),
+        "topic_share": topic_share(facts, t),
     }
     if market_points:
-        charts["rq6_volatility"] = rq6_volatility(market_points, t, stats)
+        charts["rq6_volatility"] = rq6_volatility(market_points, t, vol_stats)
+        charts["rq6_returns"] = rq6_returns(
+            market_points, t, {"pearson_r": return_fact}
+        )
     if tables:
         charts["warehouse_rows"] = warehouse_rows(tables, t)
     return charts

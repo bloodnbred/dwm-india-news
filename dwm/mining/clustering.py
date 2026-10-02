@@ -274,6 +274,7 @@ def cluster_headlines(
             "is a genuine optimum rather than an edge of the search range."
         ),
         "clusters": descriptions,
+        "projection": build_projection(reduced, labels, descriptions),
         "note": (
             "A cluster is a group of vocabulary, not the publisher's own "
             "topic. The dominant supplied topics are shown for comparison. "
@@ -283,6 +284,86 @@ def cluster_headlines(
                 "and should be read as broad themes, not tight groups. That "
                 "is expected for 8.6-word headlines."
             )
+        ),
+    }
+
+
+def build_projection(
+    reduced: np.ndarray,
+    labels: np.ndarray,
+    descriptions: list[dict],
+    *,
+    large_cap: int = 1500,
+    small_full: int = 1500,
+) -> dict:
+    """A 2D view of the space the clustering actually happened in.
+
+    Projects onto the first two LSA components rather than re-fitting a 2D
+    reduction. That matters: these are the same coordinates K-Means clustered
+    and the silhouette was computed on, so the picture is a faithful view of the
+    measured space rather than a different, prettier one.
+
+    **Sampling is deliberately uneven, and recorded.** The dominant cluster holds
+    94.88% of the sample, so a proportional subsample buries the three small
+    topical clusters under 60,000 identical-coloured points and the chart shows
+    one blob and nothing else. Instead every cluster at or below `small_full`
+    contributes every one of its points, and only the oversized cluster is
+    thinned to `large_cap`. That makes the small clusters *over*-represented
+    relative to their share, so the returned `sampled` flags and per-cluster
+    counts are what the chart caption states — the alternative is a chart that
+    looks like evidence of equal-sized topics.
+
+    Thinning is a deterministic stride rather than a random draw, so two runs
+    produce the same points.
+    """
+    total = int(len(labels))
+    points: list[dict] = []
+    per_cluster: list[dict] = []
+    for description in descriptions:
+        cluster_id = int(description["cluster_id"])
+        size = int(description["size"])
+        members = np.flatnonzero(labels == cluster_id)
+        if size <= small_full or len(members) <= large_cap:
+            chosen = members
+            sampled = False
+        else:
+            # Even stride over the member list: deterministic, and spreads the
+            # kept points across the whole cluster rather than its head.
+            stride = max(1, len(members) // large_cap)
+            chosen = members[::stride][:large_cap]
+            sampled = True
+        per_cluster.append({
+            "cluster_id": cluster_id,
+            "size": size,
+            "plotted": int(len(chosen)),
+            "sampled": sampled,
+            "dominant_supplied_topics": description.get("dominant_supplied_topics", [])[:3],
+            "top_terms": description.get("top_terms", [])[:6],
+        })
+        for index in chosen:
+            points.append({
+                "x": round(float(reduced[index, 0]), 3),
+                "y": round(float(reduced[index, 1]), 3),
+                "c": cluster_id,
+            })
+
+    # Cluster 0 is not guaranteed to be the largest, so assign colours by
+    # descending size. Otherwise the dominant blob gets whichever hue it landed
+    # on and the chart's legend order means nothing.
+    order = [c["cluster_id"] for c in sorted(per_cluster, key=lambda c: -c["size"])]
+    return {
+        "points": points,
+        "clusters": sorted(per_cluster, key=lambda c: order.index(c["cluster_id"])),
+        "sample_size": total,
+        "plotted": len(points),
+        "sampled": any(c["sampled"] for c in per_cluster),
+        "note": (
+            "Each point is one headline, projected onto the first two LSA "
+            "components of the space K-Means clustered. Clusters at or below "
+            f"{small_full} members are shown in full; the oversized cluster is "
+            f"thinned to {large_cap} so the small ones stay visible. The large "
+            "cluster is therefore over-sampled here relative to its share, and "
+            "the cluster-size chart carries the true proportions."
         ),
     }
 

@@ -8,7 +8,7 @@ reasoning behind each stage.
 
 | Phase | Gate | Result |
 |---|---|---|
-| 0 Scaffold | pytest runs, `--help` works | pass, 369 tests |
+| 0 Scaffold | pytest runs, `--help` works | pass, 371 tests |
 | 1 Ingest | staging row counts equal source | pass, zero rejects |
 | 2 ETL + dims | no null date keys, every category maps | pass |
 | 3 Features + facts | fact counts equal clean counts, keys unique | pass |

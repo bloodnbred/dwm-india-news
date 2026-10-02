@@ -147,6 +147,29 @@ def test_every_chart_the_js_names_is_served() -> None:
     missing = named - served
     assert not missing, f"the front end asks for charts that are not served: {sorted(missing)}"
 
+    # And the reverse: a spec shipped but never rendered is dead weight on the
+    # wire, and usually means a chart was built and then forgotten.
+    unused = served - named
+    assert not unused, f"charts are served but never rendered: {sorted(unused)}"
+
+
+@pytest.mark.parametrize("theme", ["light", "dark"])
+def test_every_chart_fills_its_frame(theme: str) -> None:
+    """A chart with no explicit width renders at Vega's 200px default.
+
+    That is not a crash: it draws correctly, as a small square in the corner of
+    its card. On the first build every chart on the dashboard did this, and it
+    read as missing data rather than as a sizing mistake.
+    """
+    from dwm.ui.charts import build_charts
+
+    for name, spec in build_charts(_facts_from_warehouse(), theme_name=theme).items():
+        if not spec:
+            continue
+        blob = json.dumps(spec)
+        assert '"width": "container"' in blob, f"{name} ({theme}) has no container width"
+        assert "autosize" in blob, f"{name} ({theme}) has no autosize, so it will not fit"
+
 
 def test_the_document_declares_a_theme_before_first_paint() -> None:
     """A flash of the wrong theme reads as a broken page.
@@ -325,23 +348,43 @@ def test_chart_palette_matches_the_css() -> None:
     assert not failures, "\n".join(failures)
 
 
-def test_no_encoding_damage_in_the_front_end() -> None:
+def test_no_encoding_damage_anywhere() -> None:
     """Encoding damage is invisible until someone reads the rendered page.
 
     A PowerShell round-trip double-encoded every non-ASCII character in the
     previous dashboard: a middle dot became two characters and four stray
     symbols appeared in the navigation labels. The app still ran and every other
     test still passed, because the damage is only visible in the output.
-    """
-    import re as _re
 
-    bad = _re.compile("[\u00c3\u00c2\u00e2]")
-    for path in sorted(STATIC.glob("*")) + [ROOT / "dwm" / "ui" / "charts.py"]:
-        if path.suffix not in {".html", ".css", ".js", ".py"}:
+    Scoped to the *front end* the first time, which was too narrow: an em dash
+    inside a caution string in `dwm/inference/facts.py` was corrupted the same
+    way and only surfaced by reading the file. The detector is by codepoint
+    rather than by literal character, so this test cannot itself contain the
+    thing it looks for.
+    """
+    bad = re.compile("[\u00c3\u00c2\u00e2\u00c2]")
+    replacement = "\ufffd"
+
+    targets = list(STATIC.glob("*"))
+    targets += [ROOT / "dwm" / "ui" / "charts.py"]
+    targets += sorted((ROOT / "dwm").rglob("*.py"))
+    targets += sorted((ROOT / "dashboard").rglob("*.py"))
+    targets += sorted((ROOT / "docs").glob("*.md"))
+    targets += [ROOT / "README.md", ROOT / "BLUEPRINT.md"]
+
+    checked = 0
+    for path in targets:
+        if path.suffix not in {".html", ".css", ".js", ".py", ".md"}:
             continue
         text = path.read_text(encoding="utf-8")
+        checked += 1
         assert not bad.search(text), f"{path.name} contains mojibake"
+        assert replacement not in text, (
+            f"{path.name} contains a replacement character, so some text was "
+            "already corrupted when it was written"
+        )
         assert not text.startswith("\ufeff"), f"{path.name} starts with a BOM"
+    assert checked > 40, f"the encoding sweep only covered {checked} files"
 
 
 # ---------------------------------------------------------------------------

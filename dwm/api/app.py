@@ -183,6 +183,19 @@ def summary() -> dict[str, Any]:
         if key == "outcomes":
             out[key] = block
             continue
+        # The cluster projection holds 4,551 plotted headlines. It is a picture,
+        # not a number, so it does not belong in a digest of results: it is
+        # served once by /ui/charts and stripped here, which keeps /summary
+        # small enough to fetch on every page load. The per-cluster metadata
+        # stays, because the sampling note has to travel with anything that
+        # quotes the cluster sizes.
+        if key == "rq4_clusters" and isinstance(block, dict):
+            projection = block.get("projection")
+            if isinstance(projection, dict) and projection.get("points"):
+                block = {
+                    **block,
+                    "projection": {k: v for k, v in projection.items() if k != "points"},
+                }
         fact = block.get("fact") if isinstance(block, dict) else None
         out[key] = {
             "value": fact.get("value") if fact else None,

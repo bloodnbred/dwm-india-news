@@ -1,4 +1,4 @@
-﻿"""Association rule mining (RQ5): Apriori and FP-Growth, with the timing compared.
+"""Association rule mining (RQ5): Apriori and FP-Growth, with the timing compared.
 
 The blueprint asks for rules like `topic=Business, year=2016 => sensational=high`.
 That example is ATTRIBUTE-shaped, and the data forced the same conclusion.
@@ -341,6 +341,62 @@ def mine_rules(
         key=lambda r: (-r["lift"], -r["confidence"]),
     )
     informative = [r for r in ranked if r["is_informative"] and r["beats_base_rate"]]
+    # The lift distribution across the whole rule set, binned here rather than in
+    # the presentation layer.
+    #
+    # A ranked table shows the best rules and a histogram shows the shape, and
+    # the shape is the thing that says whether the top of the list is a real
+    # effect or the tail of a distribution that mostly sits at 1.0. It has to be
+    # computed over every rule: `informative_rules` in the report is truncated
+    # to eight rows, which is enough to draw the strongest rules and far too few
+    # to show a distribution.
+    #
+    # Bins are fixed and the first and last are open-ended. Both ends matter: a
+    # single runaway lift (rare consequent, small support) would otherwise
+    # stretch the axis and flatten everything else into one bin, and — the bug
+    # this replaced — starting the bins at 1.0 silently drops every rule with
+    # lift *below* chance. Measured here that was 299 of 644 rules, so a
+    # histogram that only showed lift >= 1 was quietly describing 45% of the
+    # rule set while appearing to describe all of it.
+    LIFT_EDGES = [1.0, 1.1, 1.25, 1.5, 2.0, 3.0, 4.0, 6.0, 8.0]
+    lifts = [float(r["lift"]) for r in apriori_rules if r.get("lift") is not None]
+    lift_distribution = [{
+        "range": "below 1",
+        "low": 0.0,
+        "high": 1.0,
+        "open_ended": True,
+        "count": sum(1 for v in lifts if v < 1.0),
+    }]
+    for low, high in zip(LIFT_EDGES[:-1], LIFT_EDGES[1:], strict=True):
+        lift_distribution.append({
+            "range": f"{low:g} to {high:g}",
+            "low": low,
+            "high": high,
+            "open_ended": False,
+            "count": sum(1 for v in lifts if low <= v < high),
+        })
+    lift_distribution.append({
+        "range": f"{LIFT_EDGES[-1]:g} or more",
+        "low": LIFT_EDGES[-1],
+        "high": None,
+        "open_ended": True,
+        "count": sum(1 for v in lifts if v >= LIFT_EDGES[-1]),
+    })
+    # Asserted rather than assumed: a distribution that does not account for
+    # every rule is a misleading chart, and the way it goes wrong is invisible.
+    binned_total = sum(b["count"] for b in lift_distribution)
+    assert binned_total == len(lifts), (
+        f"lift bins account for {binned_total} of {len(lifts)} rules; a rule "
+        f"is falling outside every bin and would vanish from the chart"
+    )
+    lift_distribution_note = (
+        f"Binned over all {len(lifts)} mined rules, and the bins account for "
+        f"every one of them. The first bin is lift below 1, which is negative "
+        f"association: those attribute pairs co-occur *less* often than chance, "
+        f"usually because one implies the other, as year and quarter do. The "
+        f"cluster at 1.0 to 1.1 is where the tautologies sit. The thin tail is "
+        f"the substantive co-occurrence, and it is genuinely thin."
+    )
     # Lift is maximised by rare consequents. The window ends 2020-06-30, so
     # `2020-Q2` is a rare item and every rule pointing at it scores an
     # impressive lift that says nothing beyond "Q2 2020 is uncommon". The
@@ -418,6 +474,8 @@ def mine_rules(
         "top_rules": ranked[:25],
         "top_rules_by_confidence": by_confidence[:25],
         "informative_rules": informative[:25],
+        "lift_distribution": lift_distribution,
+        "lift_distribution_note": lift_distribution_note,
         "lift_caveat": lift_caveat,
         "note": (
             "Association, not causation. A rule states that two attributes "

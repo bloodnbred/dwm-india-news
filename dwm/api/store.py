@@ -1,4 +1,4 @@
-﻿"""The query layer behind the API and the dashboard (Phase 8).
+"""The query layer behind the API and the dashboard (Phase 8).
 
 **The API serves results; it does not recompute them.** Every figure it returns
 comes from `facts.json`, which the inference stage rendered from the warehouse.

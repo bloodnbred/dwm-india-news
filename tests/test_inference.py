@@ -1,4 +1,4 @@
-﻿"""Inference and API tests (Phases 7-8).
+"""Inference and API tests (Phases 7-8).
 
 The theme is the same as the mining tests: protect the promises rather than the
 numbers.

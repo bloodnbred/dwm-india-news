@@ -1,4 +1,4 @@
-﻿"""Phase 5-6 mining tests.
+"""Phase 5-6 mining tests.
 
 The emphasis is on the guard rails rather than on the numbers, because the
 numbers on the real corpus are already recorded in reports/mining.json. What

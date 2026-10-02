@@ -151,7 +151,7 @@ subsequent runs skip the download.
 .\.venv\Scripts\ruff.exe check .
 ```
 
-369 tests, no network access required. They cover config loading, date parsing
+371 tests, no network access required. They cover config loading, date parsing
 with its precision rules, staging against the row-count gate, the CSV
 normalisation fallback, the CLI contract, the ETL stage's dedupe grain and
 window derivation, the feature stage's measure definitions, the Phase 3

@@ -342,6 +342,11 @@ def _rq4_facts(mining: dict[str, Any]) -> dict[str, Any]:
         "svd_components": clusters.get("svd_components"),
         "svd_variance_explained": clusters.get("svd_variance_explained"),
         "clusters": clusters.get("clusters", []),
+        # The 2D projection travels with the result rather than being
+        # recomputed for display. Projecting the LSA space is cheap, but a
+        # picture derived from a different reduction than the one the
+        # silhouette was measured on would be a picture of something else.
+        "projection": clusters.get("projection", {}),
         "stability": clusters.get("stability", {}),
         "fact": fact(
             clusters.get("silhouette"),
@@ -352,7 +357,7 @@ def _rq4_facts(mining: dict[str, Any]) -> dict[str, Any]:
                 "a large cluster sitting far from a few small tight ones, and "
                 "that is the shape here: most headlines are undifferentiated "
                 "while a small topical minority is cleanly separated. The score "
-                "also depends entirely on the TF-IDF settings — an earlier run "
+                "also depends entirely on the TF-IDF settings: an earlier run "
                 "that admitted numerals and stop words measured 0.068 on the "
                 "same data."
             ),
@@ -388,6 +393,11 @@ def _rq5_facts(mining: dict[str, Any]) -> dict[str, Any]:
         "top_rules": rules.get("top_rules", [])[:8],
         "top_rules_by_confidence": rules.get("top_rules_by_confidence", [])[:8],
         "informative_rules": informative[:8],
+        # The binned lift shape, over every rule rather than the truncated
+        # top-eight above. A distribution cannot be reconstructed from eight
+        # rows, so it is carried whole and kept small by being binned.
+        "lift_distribution": rules.get("lift_distribution", []),
+        "lift_distribution_note": rules.get("lift_distribution_note"),
         "lift_caveat": rules.get("lift_caveat"),
         "keyword_run": {
             "rule_count": keyword.get("rule_count"),
