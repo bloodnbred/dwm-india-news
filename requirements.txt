@@ -23,7 +23,15 @@ httpx>=0.27,<1
 PyYAML>=6,<7
 
 # --- frontend ---
-streamlit>=1.35,<2
+# The dashboard is static HTML, CSS and vanilla JavaScript served by FastAPI,
+# with charts drawn by Vega-Lite from a CDN. No Python UI framework and no
+# bundler: Streamlit was removed because its CSS is not a supported extension
+# point, and on a machine set to dark mode it produced a light page with dark
+# widgets over it — unfixable from outside the framework.
+#
+# Chart *specifications* are built in Python with altair, because a malformed
+# spec is a blank page and building it server-side makes that a unit test.
+altair>=6,<7
 
 # --- dev / tests ---
 pytest>=8,<9

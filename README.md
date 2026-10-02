@@ -45,7 +45,7 @@ diagrams and a final reconciliation against the blueprint.
 | 4 OLAP | `dwm/olap/`, SQL cookbook | done, verified against the warehouse |
 | 5-6 Mining | trends, bursts, clusters, rules, classifier | done, all 7 questions answered |
 | 7 Inference | `facts.json`, `report.md` | done, 15 of 15 guards pass |
-| 8 API + dashboard | FastAPI, Streamlit | done, 13 endpoints, 9 panels |
+| 8 API + dashboard | FastAPI, static front end | done, 16 endpoints, 5 sections |
 | 9 Polish | viva sheet, diagrams | **next** |
 
 ## Setup
@@ -113,8 +113,7 @@ Two terminals:
 # the API: http://127.0.0.1:8000/docs
 .\.venv\Scripts\python.exe -m dwm serve
 
-# the dashboard: http://localhost:8501
-.\.venv\Scripts\python.exe -m streamlit run dashboard\app.py
+# that is it. the dashboard is at http://localhost:8000/
 ```
 
 The dashboard needs the API running. Point it elsewhere with
@@ -152,7 +151,7 @@ subsequent runs skip the download.
 .\.venv\Scripts\ruff.exe check .
 ```
 
-289 tests, no network access required. They cover config loading, date parsing
+369 tests, no network access required. They cover config loading, date parsing
 with its precision rules, staging against the row-count gate, the CSV
 normalisation fallback, the CLI contract, the ETL stage's dedupe grain and
 window derivation, the feature stage's measure definitions, the Phase 3
@@ -244,7 +243,13 @@ dwm/
     store.py         read-only warehouse handle, cached results
     app.py           13 FastAPI endpoints
 dashboard/
-  app.py             Streamlit, 5 sections, calls the API and computes nothing
+  static/
+    index.html       the shell; sets the theme before first paint
+    app.css          design tokens, both themes, contrast-checked
+    app.js           routing, page rendering, chart embedding
+  helpers.py         find_uncautoned and formatting, testable without a browser
+dwm/ui/
+  charts.py          Vega-Lite specs built in Python, themed, one palette
   helpers.py         design system + formatting, so "no figure without a caveat"
                      is testable without a browser
 tests/

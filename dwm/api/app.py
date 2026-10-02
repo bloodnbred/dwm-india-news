@@ -25,11 +25,13 @@ command to run.
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, PlainTextResponse
+from fastapi.staticfiles import StaticFiles
 
 from dwm.api import store
 from dwm.api.store import DataUnavailable
@@ -48,16 +50,23 @@ app = FastAPI(
     description=__doc__,
 )
 
-# The Streamlit dashboard runs on its own port and calls this API, so CORS has
-# to be open to localhost. It is restricted to loopback rather than "*" because
-# there is no authentication on this service and it holds a file handle open.
+# The dashboard is served from this same process, so the browser sees one
+# origin and CORS never comes into play for it. CORS is left open to loopback
+# anyway so that a client started elsewhere on the machine — a notebook, a
+# one-off script — can read the results without being fought. It is restricted
+# to loopback rather than "*" because this service has no authentication and
+# holds a file handle open.
+#
+# The dashboard used to be a separate Streamlit process on :8501, which is why
+# :8501 appears in the list below. It no longer does.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:8501", "http://127.0.0.1:8501",
         "http://localhost:8000", "http://127.0.0.1:8000",
+        "http://localhost:3000", "http://127.0.0.1:3000",
     ],
-    allow_methods=["GET"],
+    allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
 
@@ -182,8 +191,22 @@ def summary() -> dict[str, Any]:
             "source": fact.get("source") if fact else "reports/facts.json",
             "data": block,
         }
+    # Provenance, in one block. Every page shows it, so it belongs in the
+    # response rather than being assembled by whichever client asks. It was
+    # missing `config_version`, which the dashboard rendered as the literal
+    # string "config vNone" — a null in a user-facing slot is a bug whether or
+    # not the number behind it is load-bearing.
+    out["provenance"] = {
+        "generated_at": facts.get("generated_at"),
+        "mining_run_id": facts.get("mining_run_id"),
+        "config_version": facts.get("config_version"),
+        "source": "reports/facts.json",
+    }
+    # Kept at the top level as well as inside `provenance`, because these three
+    # were the original shape of this endpoint and existing clients read them.
     out["generated_at"] = facts.get("generated_at")
     out["mining_run_id"] = facts.get("mining_run_id")
+    out["config_version"] = facts.get("config_version")
     return out
 
 
@@ -297,3 +320,60 @@ def run_olap_operation(
     if operation == "top_months":
         params["n"] = n
     return _guard(store.execute, operation, params)
+
+
+# ---------------------------------------------------------------------------
+# the dashboard
+# ---------------------------------------------------------------------------
+
+
+@app.get("/ui/charts", tags=["ui"])
+def ui_charts(theme: str = Query(default="light", pattern="^(light|dark)$")) -> dict[str, Any]:
+    """Every chart on the dashboard, as Vega-Lite specs, in one theme.
+
+    **The specs are built here, in Python, and not in the browser.** That is not
+    about the "computes nothing" rule — drawing a chart is not computing a
+    finding. It is because a malformed spec is a blank page with no stack trace,
+    and building it here means a unit test can catch it. It is also how six
+    charts end up sharing one palette instead of drifting apart.
+
+    The theme is a parameter rather than a constant because a hard-coded light
+    palette is what made the previous dashboard unreadable on a machine set to
+    dark: CSS forced a light canvas while the chart library rendered dark charts
+    over it. Both are designed; the client asks for the one it is using.
+    """
+    from dwm.ui.charts import build_charts
+
+    def run() -> dict[str, Any]:
+        facts = store.load_facts()
+        charts = build_charts(
+            facts,
+            market_points=store.market_daily()["points"],
+            tables=store.table_counts(),
+            theme_name=theme,
+        )
+        return {"theme": theme, "charts": charts, "count": len(charts)}
+
+    return _guard(run)
+
+
+@app.get("/ui/manifest", tags=["ui"])
+def ui_manifest() -> dict[str, Any]:
+    """Everything the front end needs to render its shell.
+
+    Built in the store rather than inline, so a missing provenance field fails
+    the manifest test rather than showing up as "vNone" in a browser.
+    """
+    return _guard(store.build_manifest)
+
+
+# The static front end, mounted last so every API route above wins the match.
+# This is what makes the dashboard a single process: `dwm serve` serves the
+# data and the page that reads it, on one origin, with no CORS and no second
+# server to start before a demonstration.
+_STATIC_DIR = Path(__file__).resolve().parents[2] / "dashboard" / "static"
+
+if _STATIC_DIR.is_dir():
+    app.mount("/", StaticFiles(directory=_STATIC_DIR, html=True), name="dashboard")
+else:  # pragma: no cover - only when the front end has not been built
+    log.warning("dashboard static directory missing at %s", _STATIC_DIR)

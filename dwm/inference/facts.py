@@ -652,7 +652,7 @@ def build_outcomes(facts: dict[str, Any]) -> dict[str, Any]:
             if fell
             else "No event month stands out on any measure tested."
         ),
-        "caveat": (
+        "caution": (
             "This data cannot distinguish a genuinely quota-driven newsroom "
             "from a sampling artefact of the publisher's export. Both produce "
             "the same signature."
@@ -681,7 +681,7 @@ def build_outcomes(facts: dict[str, Any]) -> dict[str, Any]:
             "run measured 0.068 and was wrong: the feature pipeline was "
             "admitting numerals and stop words."
         ),
-        "caveat": (
+        "caution": (
             "Silhouette rewards one large cluster sitting far from a few small "
             "tight ones, so the score and the shape must be read together."
         ),
@@ -713,7 +713,7 @@ def build_outcomes(facts: dict[str, Any]) -> dict[str, Any]:
             "positives, so a single p below 0.05 is the expected outcome of "
             "running the tests, not a discovery."
         ),
-        "caveat": (
+        "caution": (
             "Association only. Headline volume and volatility both respond to "
             "the same underlying events, and nothing here identifies a "
             "direction of effect."
@@ -744,7 +744,7 @@ def build_outcomes(facts: dict[str, Any]) -> dict[str, Any]:
             "filing gap rather than a subject, so its score measures the "
             "absence of a filing decision."
         ),
-        "caveat": (
+        "caution": (
             "A style measure on unlabelled headlines. It is a risk-signal "
             "rate and never a fake-news rate. The threshold is the measured "
             "95th percentile, a chosen cut-off."
@@ -774,7 +774,7 @@ def build_outcomes(facts: dict[str, Any]) -> dict[str, Any]:
             "broken. The keyword vocabulary produced zero rules and is reported "
             "as a finding about the feature."
         ),
-        "caveat": (
+        "caution": (
             "Association, not causation. A rule states two attributes co-occur "
             "more often than chance."
         ),
@@ -803,7 +803,7 @@ def build_outcomes(facts: dict[str, Any]) -> dict[str, Any]:
             "that learned nothing, because always answering 'real' already "
             "scores the baseline."
         ),
-        "caveat": (
+        "caution": (
             "An upper bound. Part of IFND's Fake class is LSTM-generated "
             "augmentation, which is far easier to distinguish than a fake "
             "written by a person."
@@ -835,7 +835,7 @@ def build_outcomes(facts: dict[str, Any]) -> dict[str, Any]:
             "single year, which means the publisher changed how it filed "
             "content."
         ),
-        "caveat": (
+        "caution": (
             "2015 is a partial year, so every trend statement is a within-year "
             "share and raw counts across years are never compared."
         ),

@@ -285,7 +285,7 @@ trust least.
 powershell -ExecutionPolicy Bypass -File .\run_all.ps1 -clean
 .\.venv\Scripts\python.exe -m dwm report
 .\.venv\Scripts\python.exe -m dwm serve
-.\.venv\Scripts\python.exe -m streamlit run dashboard\app.py
+.\.venv\Scripts\python.exe -m dwm serve   # one process, dashboard included
 ```
 
 Then, for any number: `dwm olap --op <name>` for OLAP, `reports/report.md` for

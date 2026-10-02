@@ -14,7 +14,7 @@ A backend-heavy Data Warehousing and Mining project. It loads several real datas
 | Mining | scikit-learn (TF-IDF, K-Means, Naive Bayes, Logistic Regression), mlxtend (Apriori, FP-Growth), scipy | Standard, reproducible |
 | Sentiment | VADER lexicon | Fast, no training, works offline |
 | Backend | CLI (Typer) plus FastAPI | Backend is the product |
-| Frontend | Streamlit, thin (reads from the API/modules, no logic) | Python only, no JS build |
+| Frontend | Static HTML/CSS/vanilla JS, thin (reads from the API, no logic) | No bundler, no build step |
 | Tests | pytest | Phase gates |
 | Inference | Deterministic templates filled by SQL results. No LLM | Numbers are traceable, no hallucination risk |
 | Task runner | `python -m dwm <command>` | Makefile is awkward on Windows |
@@ -63,7 +63,7 @@ data/raw/{toi,ifnd,nifty}/  (gitignored)
         |
    [7] INFERENCE -> facts.json -> report.md
         |
-   [8] FastAPI  -> Streamlit dashboard (thin)
+   [8] FastAPI  -> static dashboard (thin), same process, same origin
 ```
 
 ---
@@ -92,7 +92,7 @@ data/raw/{toi,ifnd,nifty}/  (gitignored)
 | 5 Mining A | trends, bursts, cross-dataset | slope matches a manual check on a tiny fixture |
 | 6 Mining B | clustering, Apriori, classifier | classifier metrics on test split only; fixed seeds reproduce |
 | 7 Inference | `facts.json`, `report.md` | every number in report traces to a query; guard rails fire on small data |
-| 8 API + dashboard | FastAPI, Streamlit | all endpoints return 200 on the dev sample |
+| 8 API + dashboard | FastAPI, static front end | all endpoints return 200; every page renders |
 | 9 Polish | docs, final report, viva sheet | full run on real data end to end |
 
 Development rule: build and test every phase with `--sample 50000` rows. Run the full dataset only at the end of a phase.
@@ -134,3 +134,28 @@ Development rule: build and test every phase with `--sample 50000` rows. Run the
 | Dates in mixed formats | Auto-detect, count failures into `etl_audit`, continue |
 | TOI has no category column in your copy | Assign topic `Unknown` and run the topic-by-keyword fallback in `docs/01-ingest-etl.md` |
 | IFND has no dates | Allow nullable `date_key` in `fact_statement`; skip time-based IFND analysis |
+
+## Change log
+
+**Frontend, after the first build.** Phase 8 specified Streamlit, chosen because
+it keeps the project Python-only and needs no JavaScript build step. The second
+of those turned out to be false in practice, and the first was not enough to
+compensate:
+
+- Streamlit's CSS is not a supported extension point. Restyling it means guessing
+  internal class names, and the guess is wrong on every upgrade.
+- On a machine set to dark mode it painted dark widgets over the light canvas the
+  custom CSS had set, producing a page that was half light and half dark. That is
+  not fixable from outside the framework, because the injection layer cannot know
+  what the framework will paint next.
+- Every interaction re-ran the whole Python script, which is a latency problem
+  against a 1.1M-row warehouse.
+
+Replaced with static HTML, CSS and vanilla JavaScript served by the same FastAPI
+process, with Vega-Lite from a CDN for the charts. The property the original
+choice was protecting is preserved: **no bundler and no build step**, so
+`python -m dwm serve` remains the single command that starts everything.
+
+Chart specifications are still built in Python, because a malformed Vega-Lite spec
+is a blank page with no stack trace, and building it server-side makes that a unit
+test rather than something a reader discovers.

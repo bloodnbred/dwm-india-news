@@ -1,8 +1,12 @@
 """FastAPI backend (Phase 8).
 
-Built. The dashboard stays thin: Streamlit reads from these endpoints and holds
-no logic of its own (BLUEPRINT section 1), so there is exactly one place where
-a number is turned into a response.
+Built. The dashboard stays thin: it reads from these endpoints and holds no
+logic of its own (BLUEPRINT section 1), so there is exactly one place where a
+number is turned into a response.
+
+**This process serves the dashboard too.** The static front end is mounted on
+the same application, so `python -m dwm serve` is the only process needed: one
+URL, one origin, no CORS, and nothing to start before a demonstration.
 
 Run it with `python -m dwm serve`, which starts uvicorn against
 `dwm.api.app:app`.

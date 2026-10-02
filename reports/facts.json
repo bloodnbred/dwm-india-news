@@ -1,0 +1,4303 @@
+{
+  "generated_at": "2026-10-02T08:44:48.752999+00:00",
+  "mining_run_id": "20261002T065409Z",
+  "config_version": 1,
+  "corpus": {
+    "row_counts": {
+      "stg_toi": 3297172,
+      "stg_ifnd": 56714,
+      "stg_nifty": 3718,
+      "cln_headline": 3154916,
+      "cln_statement": 51110,
+      "cln_market_daily": 3718,
+      "fact_headline": 3154916,
+      "fact_statement": 51110,
+      "fact_market_daily": 3718,
+      "dim_date": 8059,
+      "dim_topic": 20,
+      "dim_keyword": 300,
+      "bridge_headline_keyword": 4223280
+    },
+    "analysis_window": {
+      "start": "2015-06-30",
+      "end": "2020-06-30",
+      "headlines_in_window": 1113427,
+      "derived_from": "max(fact_headline.publish_date) minus --years",
+      "caution": "2015 is a partial year: the window starts 2015-06-30, so it holds roughly half a year of headlines. Raw counts are not comparable across years."
+    },
+    "archive_span": {
+      "start": "2001-01-01",
+      "end": "2023-01-24"
+    },
+    "ifnd_date_quality": {
+      "month": 33964,
+      "none": 10357,
+      "month_day": 6789
+    },
+    "ifnd_label_balance": {
+      "FAKE": 17426,
+      "REAL": 33684
+    }
+  },
+  "datasets": {
+    "ifnd": {
+      "name": "IFND - Indian Fake News Dataset",
+      "citation": "Sharma, D. K., & Garg, S. (2021). IFND: a benchmark dataset for fake news detection. Complex & Intelligent Systems, 9, 2843-2863. https://doi.org/10.1007/s40747-021-00552-1",
+      "license": "See publisher terms; redistributed by the dataset authors on GitHub",
+      "provenance": "Author's own copy, github.com/sonalgarg174/Dataset. The Fake class is partly produced by an LSTM-based augmentation algorithm (real news 37,809 vs real fake 7,271 before augmentation), so reported accuracy is an upper bound and this limitation is stated in the report.",
+      "labelled": true,
+      "declared_date_precision": "month",
+      "staged_rows": 56714
+    },
+    "nifty": {
+      "name": "Nifty 50 daily index prices",
+      "citation": "Mirror of Yahoo Finance daily OHLCV for ^NSEI, redistributed in github.com/manishkr1754/NIFTY50_Data_Analysis_NSETOOLS_NSEPY_Python",
+      "license": "Unofficial redistribution of Yahoo Finance data",
+      "provenance": "Unofficial GitHub mirror of Yahoo Finance ^NSEI daily OHLCV. Not an official NSE or BSE export, so treat levels as indicative. Authoritative fallback is the NSE daily archive https://archives.nseindia.com/content/indices/ind_close_all_DDMMYYYY.csv which only reaches back to about 2018-09 and needs one request per day.",
+      "labelled": false,
+      "declared_date_precision": "day",
+      "staged_rows": 3718
+    },
+    "toi": {
+      "name": "Times of India News Headlines",
+      "citation": "Kulkarni, Rohit (2020). Times of India News Headlines. Harvard Dataverse. https://doi.org/10.7910/DVN/DPQMQH",
+      "license": "CC0 1.0 Universal (public domain dedication)",
+      "provenance": "Harvard Dataverse DOI 10.7910/DVN/DPQMQH, the official publisher of the dataset. Single outlet (TOI), English only, headlines only, no article body.",
+      "labelled": false,
+      "declared_date_precision": "day",
+      "staged_rows": 3297172
+    }
+  },
+  "rq1_topic_mix": {
+    "year_totals": {
+      "2015": 125137,
+      "2016": 248065,
+      "2017": 241687,
+      "2018": 240220,
+      "2019": 170357,
+      "2020": 87961
+    },
+    "partial_years": [
+      2015
+    ],
+    "rows": [
+      {
+        "year": 2015,
+        "topic": "Local",
+        "topic_group": "Place",
+        "headline_count": 68334,
+        "year_total": 125137,
+        "share_of_year": 0.546074,
+        "risk_signal_count": 3292,
+        "risk_signal_rate": 0.048175,
+        "mean_sentiment": -0.082311,
+        "mean_sensational_score": 0.037869,
+        "is_partial_year": true,
+        "comparable": false
+      },
+      {
+        "year": 2015,
+        "topic": "Entertainment",
+        "topic_group": "Subject",
+        "headline_count": 13486,
+        "year_total": 125137,
+        "share_of_year": 0.10777,
+        "risk_signal_count": 219,
+        "risk_signal_rate": 0.016239,
+        "mean_sentiment": 0.07236,
+        "mean_sensational_score": 0.018891,
+        "is_partial_year": true,
+        "comparable": false
+      },
+      {
+        "year": 2015,
+        "topic": "Nation",
+        "topic_group": "Place",
+        "headline_count": 11304,
+        "year_total": 125137,
+        "share_of_year": 0.090333,
+        "risk_signal_count": 420,
+        "risk_signal_rate": 0.037155,
+        "mean_sentiment": -0.052795,
+        "mean_sensational_score": 0.038454,
+        "is_partial_year": true,
+        "comparable": false
+      },
+      {
+        "year": 2015,
+        "topic": "Unknown",
+        "topic_group": "Unknown",
+        "headline_count": 8661,
+        "year_total": 125137,
+        "share_of_year": 0.069212,
+        "risk_signal_count": 1509,
+        "risk_signal_rate": 0.174229,
+        "mean_sentiment": 0.050848,
+        "mean_sensational_score": 0.079649,
+        "is_partial_year": true,
+        "comparable": false
+      },
+      {
+        "year": 2015,
+        "topic": "Sports",
+        "topic_group": "Subject",
+        "headline_count": 6126,
+        "year_total": 125137,
+        "share_of_year": 0.048954,
+        "risk_signal_count": 227,
+        "risk_signal_rate": 0.037055,
+        "mean_sentiment": 0.077451,
+        "mean_sensational_score": 0.038291,
+        "is_partial_year": true,
+        "comparable": false
+      },
+      {
+        "year": 2015,
+        "topic": "World",
+        "topic_group": "Place",
+        "headline_count": 3392,
+        "year_total": 125137,
+        "share_of_year": 0.027106,
+        "risk_signal_count": 22,
+        "risk_signal_rate": 0.006486,
+        "mean_sentiment": -0.197515,
+        "mean_sensational_score": 0.01274,
+        "is_partial_year": true,
+        "comparable": false
+      },
+      {
+        "year": 2015,
+        "topic": "Business",
+        "topic_group": "Subject",
+        "headline_count": 3196,
+        "year_total": 125137,
+        "share_of_year": 0.02554,
+        "risk_signal_count": 159,
+        "risk_signal_rate": 0.04975,
+        "mean_sentiment": 0.029906,
+        "mean_sensational_score": 0.044283,
+        "is_partial_year": true,
+        "comparable": false
+      },
+      {
+        "year": 2015,
+        "topic": "Technology",
+        "topic_group": "Subject",
+        "headline_count": 3033,
+        "year_total": 125137,
+        "share_of_year": 0.024237,
+        "risk_signal_count": 73,
+        "risk_signal_rate": 0.024069,
+        "mean_sentiment": 0.022668,
+        "mean_sensational_score": 0.025908,
+        "is_partial_year": true,
+        "comparable": false
+      },
+      {
+        "year": 2015,
+        "topic": "Lifestyle",
+        "topic_group": "Subject",
+        "headline_count": 2797,
+        "year_total": 125137,
+        "share_of_year": 0.022352,
+        "risk_signal_count": 26,
+        "risk_signal_rate": 0.009296,
+        "mean_sentiment": 0.112798,
+        "mean_sensational_score": 0.017904,
+        "is_partial_year": true,
+        "comparable": false
+      },
+      {
+        "year": 2015,
+        "topic": "Other",
+        "topic_group": "Other",
+        "headline_count": 2099,
+        "year_total": 125137,
+        "share_of_year": 0.016774,
+        "risk_signal_count": 63,
+        "risk_signal_rate": 0.030014,
+        "mean_sentiment": 0.052035,
+        "mean_sensational_score": 0.034851,
+        "is_partial_year": true,
+        "comparable": false
+      },
+      {
+        "year": 2015,
+        "topic": "Health",
+        "topic_group": "Subject",
+        "headline_count": 1390,
+        "year_total": 125137,
+        "share_of_year": 0.011108,
+        "risk_signal_count": 24,
+        "risk_signal_rate": 0.017266,
+        "mean_sentiment": 0.012466,
+        "mean_sensational_score": 0.023312,
+        "is_partial_year": true,
+        "comparable": false
+      },
+      {
+        "year": 2015,
+        "topic": "Education",
+        "topic_group": "Subject",
+        "headline_count": 614,
+        "year_total": 125137,
+        "share_of_year": 0.004907,
+        "risk_signal_count": 58,
+        "risk_signal_rate": 0.094463,
+        "mean_sentiment": 0.037263,
+        "mean_sensational_score": 0.067233,
+        "is_partial_year": true,
+        "comparable": false
+      },
+      {
+        "year": 2015,
+        "topic": "Environment",
+        "topic_group": "Subject",
+        "headline_count": 462,
+        "year_total": 125137,
+        "share_of_year": 0.003692,
+        "risk_signal_count": 6,
+        "risk_signal_rate": 0.012987,
+        "mean_sentiment": 0.008865,
+        "mean_sensational_score": 0.021958,
+        "is_partial_year": true,
+        "comparable": false
+      },
+      {
+        "year": 2015,
+        "topic": "Politics",
+        "topic_group": "Subject",
+        "headline_count": 211,
+        "year_total": 125137,
+        "share_of_year": 0.001686,
+        "risk_signal_count": 4,
+        "risk_signal_rate": 0.018957,
+        "mean_sentiment": -0.005113,
+        "mean_sensational_score": 0.046689,
+        "is_partial_year": true,
+        "comparable": false
+      },
+      {
+        "year": 2015,
+        "topic": "Automobile",
+        "topic_group": "Subject",
+        "headline_count": 32,
+        "year_total": 125137,
+        "share_of_year": 0.000256,
+        "risk_signal_count": 8,
+        "risk_signal_rate": 0.25,
+        "mean_sentiment": 0.070034,
+        "mean_sensational_score": 0.097512,
+        "is_partial_year": true,
+        "comparable": false
+      },
+      {
+        "year": 2016,
+        "topic": "Local",
+        "topic_group": "Place",
+        "headline_count": 169184,
+        "year_total": 248065,
+        "share_of_year": 0.682015,
+        "risk_signal_count": 7965,
+        "risk_signal_rate": 0.047079,
+        "mean_sentiment": -0.09009,
+        "mean_sensational_score": 0.037043,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2016,
+        "topic": "Entertainment",
+        "topic_group": "Subject",
+        "headline_count": 27175,
+        "year_total": 248065,
+        "share_of_year": 0.109548,
+        "risk_signal_count": 312,
+        "risk_signal_rate": 0.011481,
+        "mean_sentiment": 0.084371,
+        "mean_sensational_score": 0.016945,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2016,
+        "topic": "Sports",
+        "topic_group": "Subject",
+        "headline_count": 15333,
+        "year_total": 248065,
+        "share_of_year": 0.06181,
+        "risk_signal_count": 581,
+        "risk_signal_rate": 0.037892,
+        "mean_sentiment": 0.082338,
+        "mean_sensational_score": 0.036904,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2016,
+        "topic": "Nation",
+        "topic_group": "Place",
+        "headline_count": 11906,
+        "year_total": 248065,
+        "share_of_year": 0.047995,
+        "risk_signal_count": 400,
+        "risk_signal_rate": 0.033597,
+        "mean_sentiment": -0.076295,
+        "mean_sensational_score": 0.039757,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2016,
+        "topic": "Business",
+        "topic_group": "Subject",
+        "headline_count": 6890,
+        "year_total": 248065,
+        "share_of_year": 0.027775,
+        "risk_signal_count": 305,
+        "risk_signal_rate": 0.044267,
+        "mean_sentiment": 0.019458,
+        "mean_sensational_score": 0.039815,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2016,
+        "topic": "Technology",
+        "topic_group": "Subject",
+        "headline_count": 5002,
+        "year_total": 248065,
+        "share_of_year": 0.020164,
+        "risk_signal_count": 114,
+        "risk_signal_rate": 0.022791,
+        "mean_sentiment": 0.044618,
+        "mean_sensational_score": 0.028716,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2016,
+        "topic": "World",
+        "topic_group": "Place",
+        "headline_count": 4633,
+        "year_total": 248065,
+        "share_of_year": 0.018677,
+        "risk_signal_count": 32,
+        "risk_signal_rate": 0.006907,
+        "mean_sentiment": -0.185944,
+        "mean_sensational_score": 0.013303,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2016,
+        "topic": "Lifestyle",
+        "topic_group": "Subject",
+        "headline_count": 3472,
+        "year_total": 248065,
+        "share_of_year": 0.013996,
+        "risk_signal_count": 40,
+        "risk_signal_rate": 0.011521,
+        "mean_sentiment": 0.104931,
+        "mean_sensational_score": 0.019764,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2016,
+        "topic": "Health",
+        "topic_group": "Subject",
+        "headline_count": 3060,
+        "year_total": 248065,
+        "share_of_year": 0.012335,
+        "risk_signal_count": 47,
+        "risk_signal_rate": 0.015359,
+        "mean_sentiment": -0.040471,
+        "mean_sensational_score": 0.019147,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2016,
+        "topic": "Other",
+        "topic_group": "Other",
+        "headline_count": 717,
+        "year_total": 248065,
+        "share_of_year": 0.00289,
+        "risk_signal_count": 22,
+        "risk_signal_rate": 0.030683,
+        "mean_sentiment": 0.043602,
+        "mean_sensational_score": 0.029628,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2016,
+        "topic": "Environment",
+        "topic_group": "Subject",
+        "headline_count": 394,
+        "year_total": 248065,
+        "share_of_year": 0.001588,
+        "risk_signal_count": 1,
+        "risk_signal_rate": 0.002538,
+        "mean_sentiment": -0.042987,
+        "mean_sensational_score": 0.015779,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2016,
+        "topic": "Education",
+        "topic_group": "Subject",
+        "headline_count": 293,
+        "year_total": 248065,
+        "share_of_year": 0.001181,
+        "risk_signal_count": 25,
+        "risk_signal_rate": 0.085324,
+        "mean_sentiment": 0.0355,
+        "mean_sensational_score": 0.08044,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2016,
+        "topic": "Automobile",
+        "topic_group": "Subject",
+        "headline_count": 4,
+        "year_total": 248065,
+        "share_of_year": 1.6e-05,
+        "risk_signal_count": 0,
+        "risk_signal_rate": 0.0,
+        "mean_sentiment": 0.032,
+        "mean_sensational_score": 0.072916,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2016,
+        "topic": "Unknown",
+        "topic_group": "Unknown",
+        "headline_count": 2,
+        "year_total": 248065,
+        "share_of_year": 8e-06,
+        "risk_signal_count": 1,
+        "risk_signal_rate": 0.5,
+        "mean_sentiment": 0.0,
+        "mean_sensational_score": 0.145834,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2017,
+        "topic": "Local",
+        "topic_group": "Place",
+        "headline_count": 153674,
+        "year_total": 241687,
+        "share_of_year": 0.635839,
+        "risk_signal_count": 5607,
+        "risk_signal_rate": 0.036486,
+        "mean_sentiment": -0.096681,
+        "mean_sensational_score": 0.03463,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2017,
+        "topic": "Business",
+        "topic_group": "Subject",
+        "headline_count": 35729,
+        "year_total": 241687,
+        "share_of_year": 0.147832,
+        "risk_signal_count": 2028,
+        "risk_signal_rate": 0.056761,
+        "mean_sentiment": 0.014222,
+        "mean_sensational_score": 0.047683,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2017,
+        "topic": "Entertainment",
+        "topic_group": "Subject",
+        "headline_count": 21334,
+        "year_total": 241687,
+        "share_of_year": 0.088271,
+        "risk_signal_count": 138,
+        "risk_signal_rate": 0.006469,
+        "mean_sentiment": 0.091264,
+        "mean_sensational_score": 0.012636,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2017,
+        "topic": "Sports",
+        "topic_group": "Subject",
+        "headline_count": 12492,
+        "year_total": 241687,
+        "share_of_year": 0.051687,
+        "risk_signal_count": 464,
+        "risk_signal_rate": 0.037144,
+        "mean_sentiment": 0.082844,
+        "mean_sensational_score": 0.037293,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2017,
+        "topic": "Nation",
+        "topic_group": "Place",
+        "headline_count": 10348,
+        "year_total": 241687,
+        "share_of_year": 0.042816,
+        "risk_signal_count": 306,
+        "risk_signal_rate": 0.029571,
+        "mean_sentiment": -0.057962,
+        "mean_sensational_score": 0.036087,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2017,
+        "topic": "World",
+        "topic_group": "Place",
+        "headline_count": 3412,
+        "year_total": 241687,
+        "share_of_year": 0.014117,
+        "risk_signal_count": 12,
+        "risk_signal_rate": 0.003517,
+        "mean_sentiment": -0.172009,
+        "mean_sensational_score": 0.013069,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2017,
+        "topic": "Lifestyle",
+        "topic_group": "Subject",
+        "headline_count": 1742,
+        "year_total": 241687,
+        "share_of_year": 0.007208,
+        "risk_signal_count": 13,
+        "risk_signal_rate": 0.007463,
+        "mean_sentiment": 0.133366,
+        "mean_sensational_score": 0.02301,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2017,
+        "topic": "Politics",
+        "topic_group": "Subject",
+        "headline_count": 990,
+        "year_total": 241687,
+        "share_of_year": 0.004096,
+        "risk_signal_count": 26,
+        "risk_signal_rate": 0.026263,
+        "mean_sentiment": 0.005363,
+        "mean_sensational_score": 0.045581,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2017,
+        "topic": "Health",
+        "topic_group": "Subject",
+        "headline_count": 930,
+        "year_total": 241687,
+        "share_of_year": 0.003848,
+        "risk_signal_count": 25,
+        "risk_signal_rate": 0.026882,
+        "mean_sentiment": 0.019453,
+        "mean_sensational_score": 0.030378,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2017,
+        "topic": "Technology",
+        "topic_group": "Subject",
+        "headline_count": 317,
+        "year_total": 241687,
+        "share_of_year": 0.001312,
+        "risk_signal_count": 4,
+        "risk_signal_rate": 0.012618,
+        "mean_sentiment": -0.007826,
+        "mean_sensational_score": 0.022988,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2017,
+        "topic": "Education",
+        "topic_group": "Subject",
+        "headline_count": 268,
+        "year_total": 241687,
+        "share_of_year": 0.001109,
+        "risk_signal_count": 38,
+        "risk_signal_rate": 0.141791,
+        "mean_sentiment": 0.037461,
+        "mean_sensational_score": 0.104646,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2017,
+        "topic": "Environment",
+        "topic_group": "Subject",
+        "headline_count": 234,
+        "year_total": 241687,
+        "share_of_year": 0.000968,
+        "risk_signal_count": 2,
+        "risk_signal_rate": 0.008547,
+        "mean_sentiment": -0.02141,
+        "mean_sensational_score": 0.019132,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2017,
+        "topic": "Other",
+        "topic_group": "Other",
+        "headline_count": 204,
+        "year_total": 241687,
+        "share_of_year": 0.000844,
+        "risk_signal_count": 8,
+        "risk_signal_rate": 0.039216,
+        "mean_sentiment": 0.02121,
+        "mean_sensational_score": 0.027679,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2017,
+        "topic": "Unknown",
+        "topic_group": "Unknown",
+        "headline_count": 10,
+        "year_total": 241687,
+        "share_of_year": 4.1e-05,
+        "risk_signal_count": 0,
+        "risk_signal_rate": 0.0,
+        "mean_sentiment": -0.22598,
+        "mean_sensational_score": 0.0,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2017,
+        "topic": "Travel",
+        "topic_group": "Subject",
+        "headline_count": 2,
+        "year_total": 241687,
+        "share_of_year": 8e-06,
+        "risk_signal_count": 0,
+        "risk_signal_rate": 0.0,
+        "mean_sentiment": 0.28595,
+        "mean_sensational_score": 0.0,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2017,
+        "topic": "Automobile",
+        "topic_group": "Subject",
+        "headline_count": 1,
+        "year_total": 241687,
+        "share_of_year": 4e-06,
+        "risk_signal_count": 0,
+        "risk_signal_rate": 0.0,
+        "mean_sentiment": 0.0,
+        "mean_sensational_score": 0.0,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2018,
+        "topic": "Local",
+        "topic_group": "Place",
+        "headline_count": 176855,
+        "year_total": 240220,
+        "share_of_year": 0.736221,
+        "risk_signal_count": 6593,
+        "risk_signal_rate": 0.037279,
+        "mean_sentiment": -0.114284,
+        "mean_sensational_score": 0.033803,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2018,
+        "topic": "Entertainment",
+        "topic_group": "Subject",
+        "headline_count": 22872,
+        "year_total": 240220,
+        "share_of_year": 0.095213,
+        "risk_signal_count": 85,
+        "risk_signal_rate": 0.003716,
+        "mean_sentiment": 0.103325,
+        "mean_sensational_score": 0.011992,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2018,
+        "topic": "Nation",
+        "topic_group": "Place",
+        "headline_count": 10974,
+        "year_total": 240220,
+        "share_of_year": 0.045683,
+        "risk_signal_count": 396,
+        "risk_signal_rate": 0.036085,
+        "mean_sentiment": -0.058053,
+        "mean_sensational_score": 0.039773,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2018,
+        "topic": "Sports",
+        "topic_group": "Subject",
+        "headline_count": 8763,
+        "year_total": 240220,
+        "share_of_year": 0.036479,
+        "risk_signal_count": 342,
+        "risk_signal_rate": 0.039028,
+        "mean_sentiment": 0.094067,
+        "mean_sensational_score": 0.042123,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2018,
+        "topic": "Business",
+        "topic_group": "Subject",
+        "headline_count": 8721,
+        "year_total": 240220,
+        "share_of_year": 0.036304,
+        "risk_signal_count": 561,
+        "risk_signal_rate": 0.064327,
+        "mean_sentiment": 0.035808,
+        "mean_sensational_score": 0.056823,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2018,
+        "topic": "World",
+        "topic_group": "Place",
+        "headline_count": 4234,
+        "year_total": 240220,
+        "share_of_year": 0.017626,
+        "risk_signal_count": 17,
+        "risk_signal_rate": 0.004015,
+        "mean_sentiment": -0.133672,
+        "mean_sensational_score": 0.012658,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2018,
+        "topic": "Education",
+        "topic_group": "Subject",
+        "headline_count": 2201,
+        "year_total": 240220,
+        "share_of_year": 0.009162,
+        "risk_signal_count": 224,
+        "risk_signal_rate": 0.101772,
+        "mean_sentiment": 0.045646,
+        "mean_sensational_score": 0.088989,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2018,
+        "topic": "Lifestyle",
+        "topic_group": "Subject",
+        "headline_count": 2179,
+        "year_total": 240220,
+        "share_of_year": 0.009071,
+        "risk_signal_count": 25,
+        "risk_signal_rate": 0.011473,
+        "mean_sentiment": 0.132472,
+        "mean_sensational_score": 0.01693,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2018,
+        "topic": "Other",
+        "topic_group": "Other",
+        "headline_count": 905,
+        "year_total": 240220,
+        "share_of_year": 0.003767,
+        "risk_signal_count": 11,
+        "risk_signal_rate": 0.012155,
+        "mean_sentiment": 0.190562,
+        "mean_sensational_score": 0.030526,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2018,
+        "topic": "Technology",
+        "topic_group": "Subject",
+        "headline_count": 843,
+        "year_total": 240220,
+        "share_of_year": 0.003509,
+        "risk_signal_count": 8,
+        "risk_signal_rate": 0.00949,
+        "mean_sentiment": 0.027922,
+        "mean_sensational_score": 0.016955,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2018,
+        "topic": "Automobile",
+        "topic_group": "Subject",
+        "headline_count": 596,
+        "year_total": 240220,
+        "share_of_year": 0.002481,
+        "risk_signal_count": 7,
+        "risk_signal_rate": 0.011745,
+        "mean_sentiment": 0.040706,
+        "mean_sensational_score": 0.025285,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2018,
+        "topic": "Health",
+        "topic_group": "Subject",
+        "headline_count": 525,
+        "year_total": 240220,
+        "share_of_year": 0.002185,
+        "risk_signal_count": 24,
+        "risk_signal_rate": 0.045714,
+        "mean_sentiment": 0.010934,
+        "mean_sensational_score": 0.047251,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2018,
+        "topic": "Environment",
+        "topic_group": "Subject",
+        "headline_count": 244,
+        "year_total": 240220,
+        "share_of_year": 0.001016,
+        "risk_signal_count": 0,
+        "risk_signal_rate": 0.0,
+        "mean_sentiment": -0.062193,
+        "mean_sensational_score": 0.013702,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2018,
+        "topic": "Politics",
+        "topic_group": "Subject",
+        "headline_count": 241,
+        "year_total": 240220,
+        "share_of_year": 0.001003,
+        "risk_signal_count": 16,
+        "risk_signal_rate": 0.06639,
+        "mean_sentiment": -0.046032,
+        "mean_sensational_score": 0.061447,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2018,
+        "topic": "Unknown",
+        "topic_group": "Unknown",
+        "headline_count": 66,
+        "year_total": 240220,
+        "share_of_year": 0.000275,
+        "risk_signal_count": 0,
+        "risk_signal_rate": 0.0,
+        "mean_sentiment": 0.13407,
+        "mean_sensational_score": 0.036067,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2018,
+        "topic": "Religion",
+        "topic_group": "Subject",
+        "headline_count": 1,
+        "year_total": 240220,
+        "share_of_year": 4e-06,
+        "risk_signal_count": 0,
+        "risk_signal_rate": 0.0,
+        "mean_sentiment": 0.0,
+        "mean_sensational_score": 0.0,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2019,
+        "topic": "Local",
+        "topic_group": "Place",
+        "headline_count": 132548,
+        "year_total": 170357,
+        "share_of_year": 0.77806,
+        "risk_signal_count": 4885,
+        "risk_signal_rate": 0.036855,
+        "mean_sentiment": -0.115434,
+        "mean_sensational_score": 0.034635,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2019,
+        "topic": "Entertainment",
+        "topic_group": "Subject",
+        "headline_count": 11203,
+        "year_total": 170357,
+        "share_of_year": 0.065762,
+        "risk_signal_count": 68,
+        "risk_signal_rate": 0.00607,
+        "mean_sentiment": 0.147231,
+        "mean_sensational_score": 0.017257,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2019,
+        "topic": "Nation",
+        "topic_group": "Place",
+        "headline_count": 9289,
+        "year_total": 170357,
+        "share_of_year": 0.054527,
+        "risk_signal_count": 361,
+        "risk_signal_rate": 0.038863,
+        "mean_sentiment": -0.051615,
+        "mean_sensational_score": 0.042502,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2019,
+        "topic": "Business",
+        "topic_group": "Subject",
+        "headline_count": 4999,
+        "year_total": 170357,
+        "share_of_year": 0.029344,
+        "risk_signal_count": 375,
+        "risk_signal_rate": 0.075015,
+        "mean_sentiment": 0.029887,
+        "mean_sensational_score": 0.061444,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2019,
+        "topic": "Politics",
+        "topic_group": "Subject",
+        "headline_count": 3332,
+        "year_total": 170357,
+        "share_of_year": 0.019559,
+        "risk_signal_count": 154,
+        "risk_signal_rate": 0.046218,
+        "mean_sentiment": -0.018644,
+        "mean_sensational_score": 0.049022,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2019,
+        "topic": "Sports",
+        "topic_group": "Subject",
+        "headline_count": 2318,
+        "year_total": 170357,
+        "share_of_year": 0.013607,
+        "risk_signal_count": 143,
+        "risk_signal_rate": 0.061691,
+        "mean_sentiment": 0.108451,
+        "mean_sensational_score": 0.054051,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2019,
+        "topic": "Lifestyle",
+        "topic_group": "Subject",
+        "headline_count": 1842,
+        "year_total": 170357,
+        "share_of_year": 0.010813,
+        "risk_signal_count": 15,
+        "risk_signal_rate": 0.008143,
+        "mean_sentiment": 0.18074,
+        "mean_sensational_score": 0.0207,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2019,
+        "topic": "Technology",
+        "topic_group": "Subject",
+        "headline_count": 1171,
+        "year_total": 170357,
+        "share_of_year": 0.006874,
+        "risk_signal_count": 6,
+        "risk_signal_rate": 0.005124,
+        "mean_sentiment": 0.06784,
+        "mean_sensational_score": 0.022553,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2019,
+        "topic": "World",
+        "topic_group": "Place",
+        "headline_count": 1080,
+        "year_total": 170357,
+        "share_of_year": 0.00634,
+        "risk_signal_count": 10,
+        "risk_signal_rate": 0.009259,
+        "mean_sentiment": -0.133418,
+        "mean_sensational_score": 0.017133,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2019,
+        "topic": "Education",
+        "topic_group": "Subject",
+        "headline_count": 930,
+        "year_total": 170357,
+        "share_of_year": 0.005459,
+        "risk_signal_count": 124,
+        "risk_signal_rate": 0.133333,
+        "mean_sentiment": 0.052162,
+        "mean_sensational_score": 0.100974,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2019,
+        "topic": "Health",
+        "topic_group": "Subject",
+        "headline_count": 589,
+        "year_total": 170357,
+        "share_of_year": 0.003457,
+        "risk_signal_count": 15,
+        "risk_signal_rate": 0.025467,
+        "mean_sentiment": -0.047893,
+        "mean_sensational_score": 0.039658,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2019,
+        "topic": "Other",
+        "topic_group": "Other",
+        "headline_count": 440,
+        "year_total": 170357,
+        "share_of_year": 0.002583,
+        "risk_signal_count": 11,
+        "risk_signal_rate": 0.025,
+        "mean_sentiment": 0.179628,
+        "mean_sensational_score": 0.037812,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2019,
+        "topic": "Religion",
+        "topic_group": "Subject",
+        "headline_count": 267,
+        "year_total": 170357,
+        "share_of_year": 0.001567,
+        "risk_signal_count": 0,
+        "risk_signal_rate": 0.0,
+        "mean_sentiment": -0.184978,
+        "mean_sensational_score": 0.000187,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2019,
+        "topic": "Automobile",
+        "topic_group": "Subject",
+        "headline_count": 238,
+        "year_total": 170357,
+        "share_of_year": 0.001397,
+        "risk_signal_count": 6,
+        "risk_signal_rate": 0.02521,
+        "mean_sentiment": 0.027126,
+        "mean_sensational_score": 0.025903,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2019,
+        "topic": "Environment",
+        "topic_group": "Subject",
+        "headline_count": 109,
+        "year_total": 170357,
+        "share_of_year": 0.00064,
+        "risk_signal_count": 1,
+        "risk_signal_rate": 0.009174,
+        "mean_sentiment": -0.037083,
+        "mean_sensational_score": 0.012675,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2019,
+        "topic": "Unknown",
+        "topic_group": "Unknown",
+        "headline_count": 2,
+        "year_total": 170357,
+        "share_of_year": 1.2e-05,
+        "risk_signal_count": 1,
+        "risk_signal_rate": 0.5,
+        "mean_sentiment": 0.6961,
+        "mean_sensational_score": 0.196527,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2020,
+        "topic": "Local",
+        "topic_group": "Place",
+        "headline_count": 78264,
+        "year_total": 87961,
+        "share_of_year": 0.889758,
+        "risk_signal_count": 2524,
+        "risk_signal_rate": 0.03225,
+        "mean_sentiment": -0.083994,
+        "mean_sensational_score": 0.031555,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2020,
+        "topic": "Entertainment",
+        "topic_group": "Subject",
+        "headline_count": 2989,
+        "year_total": 87961,
+        "share_of_year": 0.033981,
+        "risk_signal_count": 24,
+        "risk_signal_rate": 0.008029,
+        "mean_sentiment": 0.157119,
+        "mean_sensational_score": 0.024813,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2020,
+        "topic": "Nation",
+        "topic_group": "Place",
+        "headline_count": 2949,
+        "year_total": 87961,
+        "share_of_year": 0.033526,
+        "risk_signal_count": 112,
+        "risk_signal_rate": 0.037979,
+        "mean_sentiment": -0.052754,
+        "mean_sensational_score": 0.038238,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2020,
+        "topic": "Business",
+        "topic_group": "Subject",
+        "headline_count": 2084,
+        "year_total": 87961,
+        "share_of_year": 0.023692,
+        "risk_signal_count": 151,
+        "risk_signal_rate": 0.072457,
+        "mean_sentiment": 0.024938,
+        "mean_sensational_score": 0.055788,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2020,
+        "topic": "Lifestyle",
+        "topic_group": "Subject",
+        "headline_count": 531,
+        "year_total": 87961,
+        "share_of_year": 0.006037,
+        "risk_signal_count": 4,
+        "risk_signal_rate": 0.007533,
+        "mean_sentiment": 0.148366,
+        "mean_sensational_score": 0.022066,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2020,
+        "topic": "World",
+        "topic_group": "Place",
+        "headline_count": 286,
+        "year_total": 87961,
+        "share_of_year": 0.003251,
+        "risk_signal_count": 3,
+        "risk_signal_rate": 0.01049,
+        "mean_sentiment": -0.140396,
+        "mean_sensational_score": 0.021112,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2020,
+        "topic": "Sports",
+        "topic_group": "Subject",
+        "headline_count": 267,
+        "year_total": 87961,
+        "share_of_year": 0.003035,
+        "risk_signal_count": 10,
+        "risk_signal_rate": 0.037453,
+        "mean_sentiment": 0.0604,
+        "mean_sensational_score": 0.03854,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2020,
+        "topic": "Education",
+        "topic_group": "Subject",
+        "headline_count": 144,
+        "year_total": 87961,
+        "share_of_year": 0.001637,
+        "risk_signal_count": 18,
+        "risk_signal_rate": 0.125,
+        "mean_sentiment": -0.037213,
+        "mean_sensational_score": 0.088848,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2020,
+        "topic": "Health",
+        "topic_group": "Subject",
+        "headline_count": 116,
+        "year_total": 87961,
+        "share_of_year": 0.001319,
+        "risk_signal_count": 3,
+        "risk_signal_rate": 0.025862,
+        "mean_sentiment": -0.01776,
+        "mean_sensational_score": 0.02751,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2020,
+        "topic": "Technology",
+        "topic_group": "Subject",
+        "headline_count": 87,
+        "year_total": 87961,
+        "share_of_year": 0.000989,
+        "risk_signal_count": 3,
+        "risk_signal_rate": 0.034483,
+        "mean_sentiment": 0.077315,
+        "mean_sensational_score": 0.028301,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2020,
+        "topic": "Other",
+        "topic_group": "Other",
+        "headline_count": 65,
+        "year_total": 87961,
+        "share_of_year": 0.000739,
+        "risk_signal_count": 3,
+        "risk_signal_rate": 0.046154,
+        "mean_sentiment": 0.175708,
+        "mean_sensational_score": 0.043062,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2020,
+        "topic": "Politics",
+        "topic_group": "Subject",
+        "headline_count": 59,
+        "year_total": 87961,
+        "share_of_year": 0.000671,
+        "risk_signal_count": 5,
+        "risk_signal_rate": 0.084746,
+        "mean_sentiment": 0.041856,
+        "mean_sensational_score": 0.074474,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2020,
+        "topic": "Automobile",
+        "topic_group": "Subject",
+        "headline_count": 58,
+        "year_total": 87961,
+        "share_of_year": 0.000659,
+        "risk_signal_count": 1,
+        "risk_signal_rate": 0.017241,
+        "mean_sentiment": 0.038833,
+        "mean_sensational_score": 0.028101,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2020,
+        "topic": "Religion",
+        "topic_group": "Subject",
+        "headline_count": 53,
+        "year_total": 87961,
+        "share_of_year": 0.000603,
+        "risk_signal_count": 0,
+        "risk_signal_rate": 0.0,
+        "mean_sentiment": -0.214111,
+        "mean_sensational_score": 0.001693,
+        "is_partial_year": false,
+        "comparable": true
+      },
+      {
+        "year": 2020,
+        "topic": "Environment",
+        "topic_group": "Subject",
+        "headline_count": 9,
+        "year_total": 87961,
+        "share_of_year": 0.000102,
+        "risk_signal_count": 0,
+        "risk_signal_rate": 0.0,
+        "mean_sentiment": 0.053622,
+        "mean_sensational_score": 0.032716,
+        "is_partial_year": false,
+        "comparable": true
+      }
+    ],
+    "largest_moves": [
+      {
+        "topic": "Local",
+        "topic_group": "Place",
+        "from_year": 2015,
+        "to_year": 2016,
+        "year_gap": 1,
+        "is_year_on_year": true,
+        "from_share": 0.546074,
+        "to_share": 0.682015,
+        "change_pp": 13.5941,
+        "from_count": 68334,
+        "to_count": 169184,
+        "from_comparable": false,
+        "to_comparable": true,
+        "both_comparable": false
+      },
+      {
+        "topic": "Business",
+        "topic_group": "Subject",
+        "from_year": 2016,
+        "to_year": 2017,
+        "year_gap": 1,
+        "is_year_on_year": true,
+        "from_share": 0.027775,
+        "to_share": 0.147832,
+        "change_pp": 12.0057,
+        "from_count": 6890,
+        "to_count": 35729,
+        "from_comparable": true,
+        "to_comparable": true,
+        "both_comparable": true
+      },
+      {
+        "topic": "Local",
+        "topic_group": "Place",
+        "from_year": 2019,
+        "to_year": 2020,
+        "year_gap": 1,
+        "is_year_on_year": true,
+        "from_share": 0.77806,
+        "to_share": 0.889758,
+        "change_pp": 11.1698,
+        "from_count": 132548,
+        "to_count": 78264,
+        "from_comparable": true,
+        "to_comparable": true,
+        "both_comparable": true
+      },
+      {
+        "topic": "Business",
+        "topic_group": "Subject",
+        "from_year": 2017,
+        "to_year": 2018,
+        "year_gap": 1,
+        "is_year_on_year": true,
+        "from_share": 0.147832,
+        "to_share": 0.036304,
+        "change_pp": -11.1528,
+        "from_count": 35729,
+        "to_count": 8721,
+        "from_comparable": true,
+        "to_comparable": true,
+        "both_comparable": true
+      },
+      {
+        "topic": "Local",
+        "topic_group": "Place",
+        "from_year": 2017,
+        "to_year": 2018,
+        "year_gap": 1,
+        "is_year_on_year": true,
+        "from_share": 0.635839,
+        "to_share": 0.736221,
+        "change_pp": 10.0382,
+        "from_count": 153674,
+        "to_count": 176855,
+        "from_comparable": true,
+        "to_comparable": true,
+        "both_comparable": true
+      },
+      {
+        "topic": "Unknown",
+        "topic_group": "Unknown",
+        "from_year": 2015,
+        "to_year": 2016,
+        "year_gap": 1,
+        "is_year_on_year": true,
+        "from_share": 0.069212,
+        "to_share": 8e-06,
+        "change_pp": -6.9204,
+        "from_count": 8661,
+        "to_count": 2,
+        "from_comparable": false,
+        "to_comparable": true,
+        "both_comparable": false
+      },
+      {
+        "topic": "Local",
+        "topic_group": "Place",
+        "from_year": 2016,
+        "to_year": 2017,
+        "year_gap": 1,
+        "is_year_on_year": true,
+        "from_share": 0.682015,
+        "to_share": 0.635839,
+        "change_pp": -4.6176,
+        "from_count": 169184,
+        "to_count": 153674,
+        "from_comparable": true,
+        "to_comparable": true,
+        "both_comparable": true
+      },
+      {
+        "topic": "Nation",
+        "topic_group": "Place",
+        "from_year": 2015,
+        "to_year": 2016,
+        "year_gap": 1,
+        "is_year_on_year": true,
+        "from_share": 0.090333,
+        "to_share": 0.047995,
+        "change_pp": -4.2338,
+        "from_count": 11304,
+        "to_count": 11906,
+        "from_comparable": false,
+        "to_comparable": true,
+        "both_comparable": false
+      }
+    ],
+    "window_shares": {
+      "headlines_in_window": 1113427,
+      "topics": [
+        {
+          "topic": "Local",
+          "topic_group": "Place",
+          "headline_count": 778859,
+          "share_of_window": 0.699515
+        },
+        {
+          "topic": "Entertainment",
+          "topic_group": "Subject",
+          "headline_count": 99059,
+          "share_of_window": 0.088968
+        },
+        {
+          "topic": "Business",
+          "topic_group": "Subject",
+          "headline_count": 61619,
+          "share_of_window": 0.055342
+        },
+        {
+          "topic": "Nation",
+          "topic_group": "Place",
+          "headline_count": 56770,
+          "share_of_window": 0.050987
+        },
+        {
+          "topic": "Sports",
+          "topic_group": "Subject",
+          "headline_count": 45299,
+          "share_of_window": 0.040684
+        },
+        {
+          "topic": "World",
+          "topic_group": "Place",
+          "headline_count": 17037,
+          "share_of_window": 0.015301
+        },
+        {
+          "topic": "Lifestyle",
+          "topic_group": "Subject",
+          "headline_count": 12563,
+          "share_of_window": 0.011283
+        },
+        {
+          "topic": "Technology",
+          "topic_group": "Subject",
+          "headline_count": 10453,
+          "share_of_window": 0.009388
+        },
+        {
+          "topic": "Unknown",
+          "topic_group": "Unknown",
+          "headline_count": 8741,
+          "share_of_window": 0.007851
+        },
+        {
+          "topic": "Health",
+          "topic_group": "Subject",
+          "headline_count": 6610,
+          "share_of_window": 0.005937
+        }
+      ],
+      "topic_groups": [
+        {
+          "topic_group": "Place",
+          "headline_count": 852666,
+          "share_of_window": 0.765803
+        },
+        {
+          "topic_group": "Subject",
+          "headline_count": 247590,
+          "share_of_window": 0.222368
+        },
+        {
+          "topic_group": "Unknown",
+          "headline_count": 8741,
+          "share_of_window": 0.007851
+        },
+        {
+          "topic_group": "Other",
+          "headline_count": 4430,
+          "share_of_window": 0.003979
+        }
+      ]
+    },
+    "top_place_topic": {
+      "year": 2020,
+      "topic": "Local",
+      "topic_group": "Place",
+      "headline_count": 78264,
+      "year_total": 87961,
+      "share_of_year": 0.889758,
+      "risk_signal_count": 2524,
+      "risk_signal_rate": 0.03225,
+      "mean_sentiment": -0.083994,
+      "mean_sensational_score": 0.031555,
+      "is_partial_year": false,
+      "comparable": true
+    },
+    "top_subject_topics": [
+      {
+        "topic": "Business",
+        "year": 2017,
+        "share": 0.147832
+      },
+      {
+        "topic": "Entertainment",
+        "year": 2016,
+        "share": 0.109548
+      },
+      {
+        "topic": "Entertainment",
+        "year": 2015,
+        "share": 0.10777
+      },
+      {
+        "topic": "Entertainment",
+        "year": 2018,
+        "share": 0.095213
+      },
+      {
+        "topic": "Entertainment",
+        "year": 2017,
+        "share": 0.088271
+      }
+    ],
+    "taxonomy_artefacts": [
+      {
+        "year": 2017,
+        "raw_category": "business.international-business",
+        "count": 26856,
+        "year_total": 241687,
+        "share_of_year": 0.111119
+      }
+    ],
+    "artefact_note": "A single raw category holding this share of a year indicates a change in how the publisher filed content, not a change in reader interest. Affected years need this caveat in the report.",
+    "fact": {
+      "value": "See largest_moves for the ranked table.",
+      "unit": null,
+      "source": "reports/mining.json:rq1_composition_shift.largest_moves",
+      "caution": "Shares are within-year, so the partial year does not distort them. Raw counts across years are not comparable."
+    }
+  },
+  "rq2_bursts": {
+    "volume_bursts_found": 0,
+    "volume_is_flat": true,
+    "max_within_year_cv": 0.0352,
+    "per_year_cv": {
+      "2015": null,
+      "2016": 0.0202,
+      "2017": 0.0296,
+      "2018": 0.0352,
+      "2019": 0.0288,
+      "2020": null
+    },
+    "finding": "No month is a volume outlier. Within-year volume CV is at most 0.035, and the busiest month of each year runs only 2-5% above its own mean. The archive's headline volume behaves like a fixed editorial capacity rather than a response to news intensity.",
+    "counter_signals": [
+      {
+        "year_month": "2020-04",
+        "label": "Lockdown extended to 3 May 2020",
+        "measure": "negative_rate",
+        "z_score": -2.627
+      },
+      {
+        "year_month": "2020-05",
+        "label": "Lockdown eased from 18 May 2020",
+        "measure": "sensationalism_rate",
+        "z_score": -2.264
+      }
+    ],
+    "counter_signal_declines": [
+      {
+        "year_month": "2020-04",
+        "label": "Lockdown extended to 3 May 2020",
+        "measure": "negative_rate",
+        "z_score": -2.627
+      },
+      {
+        "year_month": "2020-05",
+        "label": "Lockdown eased from 18 May 2020",
+        "measure": "sensationalism_rate",
+        "z_score": -2.264
+      },
+      {
+        "year_month": "2020-04",
+        "label": "Lockdown extended to 3 May 2020",
+        "measure": "sensationalism_rate",
+        "z_score": -1.835
+      },
+      {
+        "year_month": "2020-04",
+        "label": "Lockdown extended to 3 May 2020",
+        "measure": "topic_volume:Entertainment",
+        "z_score": -1.8
+      },
+      {
+        "year_month": "2020-05",
+        "label": "Lockdown eased from 18 May 2020",
+        "measure": "topic_volume:Entertainment",
+        "z_score": -1.734
+      },
+      {
+        "year_month": "2020-05",
+        "label": "Lockdown eased from 18 May 2020",
+        "measure": "negative_rate",
+        "z_score": -1.712
+      },
+      {
+        "year_month": "2020-03",
+        "label": "National COVID-19 lockdown announced 24 Mar 2020",
+        "measure": "topic_volume:Entertainment",
+        "z_score": -1.571
+      },
+      {
+        "year_month": "2019-02",
+        "label": "Union Budget, 1 Feb 2019",
+        "measure": "topic_volume:Entertainment",
+        "z_score": -1.53
+      },
+      {
+        "year_month": "2020-05",
+        "label": "Lockdown eased from 18 May 2020",
+        "measure": "topic_volume:Sports",
+        "z_score": -1.438
+      },
+      {
+        "year_month": "2020-04",
+        "label": "Lockdown extended to 3 May 2020",
+        "measure": "topic_volume:Sports",
+        "z_score": -1.412
+      },
+      {
+        "year_month": "2020-05",
+        "label": "Lockdown eased from 18 May 2020",
+        "measure": "topic_volume:Nation",
+        "z_score": -1.37
+      },
+      {
+        "year_month": "2019-02",
+        "label": "Union Budget, 1 Feb 2019",
+        "measure": "topic_volume:Sports",
+        "z_score": -1.361
+      }
+    ],
+    "event_responsive_topics": [
+      "Health",
+      "Sports",
+      "Entertainment"
+    ],
+    "predicted_desks_fell_in": [
+      "2019-02",
+      "2019-05",
+      "2020-03",
+      "2020-04",
+      "2020-05"
+    ],
+    "counter_signal_summary": "The single largest departure is `negative_rate` in 2020-04 at z = -2.63. In 5 of the 10 event months (2019-02, 2019-05, 2020-03, 2020-04, 2020-05) every one of the desks predicted to rise \u2014 Health, Sports, Entertainment \u2014 fell below its norm instead. That is a specific prediction failing, not a vague absence of signal. For scale, 81 of 154 measures sit below \u22120.5 SD, against roughly 47.5 expected by chance. That count is **not** offered as a significance test: the measures share months and are correlated, so their z-scores are not independent and the count is only shown so it is not hidden.",
+    "counter_signal_note": "Derived from the measured z-scores above, not asserted. Note that these are departures from the norm, not dramatic swings: the largest is around 1.5 standard deviations on a series this flat.",
+    "event_months": [
+      {
+        "year_month": "2016-11",
+        "label": "Demonetisation announced 8 Nov 2016",
+        "measures": {
+          "topic_volume:World": {
+            "value": 262.0,
+            "z_score": -0.094,
+            "is_burst": false
+          },
+          "topic_volume:Education": {
+            "value": 12.0,
+            "z_score": -0.872,
+            "is_burst": false
+          },
+          "topic_volume:Nation": {
+            "value": 912.0,
+            "z_score": -0.049,
+            "is_burst": false
+          },
+          "topic_volume:Health": {
+            "value": 147.0,
+            "z_score": 0.371,
+            "is_burst": false
+          },
+          "topic_volume:Technology": {
+            "value": 22.0,
+            "z_score": -0.667,
+            "is_burst": false
+          },
+          "topic_volume:Lifestyle": {
+            "value": 126.0,
+            "z_score": -0.635,
+            "is_burst": false
+          },
+          "topic_volume:Entertainment": {
+            "value": 1920.0,
+            "z_score": 0.43,
+            "is_burst": false
+          },
+          "topic_volume:Local": {
+            "value": 14759.0,
+            "z_score": 0.893,
+            "is_burst": false
+          },
+          "topic_volume:Environment": {
+            "value": 29.0,
+            "z_score": 0.203,
+            "is_burst": false
+          },
+          "topic_volume:Other": {
+            "value": 92.0,
+            "z_score": 0.197,
+            "is_burst": false
+          },
+          "topic_volume:Business": {
+            "value": 477.0,
+            "z_score": -0.462,
+            "is_burst": false
+          },
+          "topic_volume:Sports": {
+            "value": 1642.0,
+            "z_score": 1.81,
+            "is_burst": false
+          },
+          "sensationalism_rate": {
+            "value": 0.032696,
+            "z_score": -0.756,
+            "is_burst": false
+          },
+          "negative_rate": {
+            "value": 0.140784,
+            "z_score": -0.146,
+            "is_burst": false
+          }
+        }
+      },
+      {
+        "year_month": "2016-12",
+        "label": "Demonetisation midnight deadline 31 Dec 2016",
+        "measures": {
+          "topic_volume:World": {
+            "value": 369.0,
+            "z_score": 0.489,
+            "is_burst": false
+          },
+          "topic_volume:Education": {
+            "value": 24.0,
+            "z_score": -0.701,
+            "is_burst": false
+          },
+          "topic_volume:Nation": {
+            "value": 1148.0,
+            "z_score": 0.568,
+            "is_burst": false
+          },
+          "topic_volume:Health": {
+            "value": 171.0,
+            "z_score": 0.601,
+            "is_burst": false
+          },
+          "topic_volume:Technology": {
+            "value": 53.0,
+            "z_score": -0.529,
+            "is_burst": false
+          },
+          "topic_volume:Lifestyle": {
+            "value": 198.0,
+            "z_score": -0.063,
+            "is_burst": false
+          },
+          "topic_volume:Entertainment": {
+            "value": 2217.0,
+            "z_score": 0.86,
+            "is_burst": false
+          },
+          "topic_volume:Local": {
+            "value": 14736.0,
+            "z_score": 0.883,
+            "is_burst": false
+          },
+          "topic_volume:Environment": {
+            "value": 76.0,
+            "z_score": 2.379,
+            "is_burst": true
+          },
+          "topic_volume:Other": {
+            "value": 33.0,
+            "z_score": -0.402,
+            "is_burst": false
+          },
+          "topic_volume:Business": {
+            "value": 616.0,
+            "z_score": -0.342,
+            "is_burst": false
+          },
+          "topic_volume:Sports": {
+            "value": 1444.0,
+            "z_score": 1.411,
+            "is_burst": false
+          },
+          "sensationalism_rate": {
+            "value": 0.030733,
+            "z_score": -1.059,
+            "is_burst": false
+          },
+          "negative_rate": {
+            "value": 0.13659,
+            "z_score": -0.461,
+            "is_burst": false
+          }
+        }
+      },
+      {
+        "year_month": "2017-07",
+        "label": "GST launched 1 Jul 2017",
+        "measures": {
+          "topic_volume:World": {
+            "value": 216.0,
+            "z_score": -0.345,
+            "is_burst": false
+          },
+          "topic_volume:Education": {
+            "value": 39.0,
+            "z_score": -0.486,
+            "is_burst": false
+          },
+          "topic_volume:Nation": {
+            "value": 1110.0,
+            "z_score": 0.469,
+            "is_burst": false
+          },
+          "topic_volume:Health": {
+            "value": 81.0,
+            "z_score": -0.263,
+            "is_burst": false
+          },
+          "topic_volume:Technology": {
+            "value": 21.0,
+            "z_score": -0.671,
+            "is_burst": false
+          },
+          "topic_volume:Lifestyle": {
+            "value": 172.0,
+            "z_score": -0.27,
+            "is_burst": false
+          },
+          "topic_volume:Entertainment": {
+            "value": 2260.0,
+            "z_score": 0.923,
+            "is_burst": false
+          },
+          "topic_volume:Local": {
+            "value": 13092.0,
+            "z_score": 0.145,
+            "is_burst": false
+          },
+          "topic_volume:Environment": {
+            "value": 22.0,
+            "z_score": -0.121,
+            "is_burst": false
+          },
+          "topic_volume:Unknown": {
+            "value": 9.0,
+            "z_score": -0.606,
+            "is_burst": false
+          },
+          "topic_volume:Other": {
+            "value": 17.0,
+            "z_score": -0.565,
+            "is_burst": false
+          },
+          "topic_volume:Business": {
+            "value": 2697.0,
+            "z_score": 1.463,
+            "is_burst": false
+          },
+          "topic_volume:Sports": {
+            "value": 746.0,
+            "z_score": 0.007,
+            "is_burst": false
+          },
+          "sensationalism_rate": {
+            "value": 0.035979,
+            "z_score": -0.25,
+            "is_burst": false
+          },
+          "negative_rate": {
+            "value": 0.137327,
+            "z_score": -0.406,
+            "is_burst": false
+          }
+        }
+      },
+      {
+        "year_month": "2017-08",
+        "label": "Independence Day, 15 Aug 2017",
+        "measures": {
+          "topic_volume:World": {
+            "value": 233.0,
+            "z_score": -0.252,
+            "is_burst": false
+          },
+          "topic_volume:Education": {
+            "value": 18.0,
+            "z_score": -0.786,
+            "is_burst": false
+          },
+          "topic_volume:Nation": {
+            "value": 1000.0,
+            "z_score": 0.181,
+            "is_burst": false
+          },
+          "topic_volume:Health": {
+            "value": 46.0,
+            "z_score": -0.599,
+            "is_burst": false
+          },
+          "topic_volume:Technology": {
+            "value": 23.0,
+            "z_score": -0.663,
+            "is_burst": false
+          },
+          "topic_volume:Lifestyle": {
+            "value": 114.0,
+            "z_score": -0.73,
+            "is_burst": false
+          },
+          "topic_volume:Entertainment": {
+            "value": 1767.0,
+            "z_score": 0.208,
+            "is_burst": false
+          },
+          "topic_volume:Local": {
+            "value": 11606.0,
+            "z_score": -0.521,
+            "is_burst": false
+          },
+          "topic_volume:Environment": {
+            "value": 21.0,
+            "z_score": -0.167,
+            "is_burst": false
+          },
+          "topic_volume:Other": {
+            "value": 9.0,
+            "z_score": -0.646,
+            "is_burst": false
+          },
+          "topic_volume:Business": {
+            "value": 4779.0,
+            "z_score": 3.269,
+            "is_burst": true
+          },
+          "topic_volume:Sports": {
+            "value": 914.0,
+            "z_score": 0.345,
+            "is_burst": false
+          },
+          "sensationalism_rate": {
+            "value": 0.036532,
+            "z_score": -0.165,
+            "is_burst": false
+          },
+          "negative_rate": {
+            "value": 0.125816,
+            "z_score": -1.269,
+            "is_burst": false
+          }
+        }
+      },
+      {
+        "year_month": "2018-01",
+        "label": "Union Budget, 1 Feb 2018 (session starts)",
+        "measures": {
+          "topic_volume:World": {
+            "value": 450.0,
+            "z_score": 0.93,
+            "is_burst": false
+          },
+          "topic_volume:Education": {
+            "value": 88.0,
+            "z_score": 0.215,
+            "is_burst": false
+          },
+          "topic_volume:Nation": {
+            "value": 917.0,
+            "z_score": -0.036,
+            "is_burst": false
+          },
+          "topic_volume:Health": {
+            "value": 54.0,
+            "z_score": -0.522,
+            "is_burst": false
+          },
+          "topic_volume:Technology": {
+            "value": 48.0,
+            "z_score": -0.551,
+            "is_burst": false
+          },
+          "topic_volume:Lifestyle": {
+            "value": 147.0,
+            "z_score": -0.468,
+            "is_burst": false
+          },
+          "topic_volume:Entertainment": {
+            "value": 1586.0,
+            "z_score": -0.055,
+            "is_burst": false
+          },
+          "topic_volume:Local": {
+            "value": 15083.0,
+            "z_score": 1.038,
+            "is_burst": false
+          },
+          "topic_volume:Environment": {
+            "value": 24.0,
+            "z_score": -0.028,
+            "is_burst": false
+          },
+          "topic_volume:Other": {
+            "value": 58.0,
+            "z_score": -0.148,
+            "is_burst": false
+          },
+          "topic_volume:Business": {
+            "value": 716.0,
+            "z_score": -0.255,
+            "is_burst": false
+          },
+          "topic_volume:Sports": {
+            "value": 1276.0,
+            "z_score": 1.073,
+            "is_burst": false
+          },
+          "topic_volume:Automobile": {
+            "value": 24.0,
+            "z_score": -0.093,
+            "is_burst": false
+          },
+          "sensationalism_rate": {
+            "value": 0.036735,
+            "z_score": -0.134,
+            "is_burst": false
+          },
+          "negative_rate": {
+            "value": 0.146549,
+            "z_score": 0.286,
+            "is_burst": false
+          }
+        }
+      },
+      {
+        "year_month": "2019-02",
+        "label": "Union Budget, 1 Feb 2019",
+        "measures": {
+          "topic_volume:World": {
+            "value": 44.0,
+            "z_score": -1.282,
+            "is_burst": false
+          },
+          "topic_volume:Education": {
+            "value": 34.0,
+            "z_score": -0.557,
+            "is_burst": false
+          },
+          "topic_volume:Nation": {
+            "value": 775.0,
+            "z_score": -0.407,
+            "is_burst": false
+          },
+          "topic_volume:Health": {
+            "value": 22.0,
+            "z_score": -0.829,
+            "is_burst": false
+          },
+          "topic_volume:Technology": {
+            "value": 46.0,
+            "z_score": -0.56,
+            "is_burst": false
+          },
+          "topic_volume:Lifestyle": {
+            "value": 115.0,
+            "z_score": -0.722,
+            "is_burst": false
+          },
+          "topic_volume:Entertainment": {
+            "value": 569.0,
+            "z_score": -1.53,
+            "is_burst": false
+          },
+          "topic_volume:Local": {
+            "value": 11108.0,
+            "z_score": -0.745,
+            "is_burst": false
+          },
+          "topic_volume:Environment": {
+            "value": 6.0,
+            "z_score": -0.861,
+            "is_burst": false
+          },
+          "topic_volume:Unknown": {
+            "value": 1.0,
+            "z_score": -0.619,
+            "is_burst": false
+          },
+          "topic_volume:Other": {
+            "value": 18.0,
+            "z_score": -0.555,
+            "is_burst": false
+          },
+          "topic_volume:Business": {
+            "value": 445.0,
+            "z_score": -0.49,
+            "is_burst": false
+          },
+          "topic_volume:Sports": {
+            "value": 66.0,
+            "z_score": -1.361,
+            "is_burst": false
+          },
+          "topic_volume:Automobile": {
+            "value": 5.0,
+            "z_score": -0.784,
+            "is_burst": false
+          },
+          "topic_volume:Politics": {
+            "value": 6.0,
+            "z_score": -0.431,
+            "is_burst": false
+          },
+          "sensationalism_rate": {
+            "value": 0.038537,
+            "z_score": 0.144,
+            "is_burst": false
+          },
+          "negative_rate": {
+            "value": 0.155807,
+            "z_score": 0.981,
+            "is_burst": false
+          }
+        }
+      },
+      {
+        "year_month": "2019-05",
+        "label": "General election result, 23 May 2019",
+        "measures": {
+          "topic_volume:World": {
+            "value": 67.0,
+            "z_score": -1.157,
+            "is_burst": false
+          },
+          "topic_volume:Education": {
+            "value": 105.0,
+            "z_score": 0.459,
+            "is_burst": false
+          },
+          "topic_volume:Nation": {
+            "value": 669.0,
+            "z_score": -0.684,
+            "is_burst": false
+          },
+          "topic_volume:Health": {
+            "value": 50.0,
+            "z_score": -0.56,
+            "is_burst": false
+          },
+          "topic_volume:Technology": {
+            "value": 157.0,
+            "z_score": -0.064,
+            "is_burst": false
+          },
+          "topic_volume:Lifestyle": {
+            "value": 149.0,
+            "z_score": -0.452,
+            "is_burst": false
+          },
+          "topic_volume:Entertainment": {
+            "value": 1119.0,
+            "z_score": -0.733,
+            "is_burst": false
+          },
+          "topic_volume:Local": {
+            "value": 10633.0,
+            "z_score": -0.958,
+            "is_burst": false
+          },
+          "topic_volume:Environment": {
+            "value": 14.0,
+            "z_score": -0.491,
+            "is_burst": false
+          },
+          "topic_volume:Other": {
+            "value": 31.0,
+            "z_score": -0.423,
+            "is_burst": false
+          },
+          "topic_volume:Business": {
+            "value": 382.0,
+            "z_score": -0.545,
+            "is_burst": false
+          },
+          "topic_volume:Sports": {
+            "value": 205.0,
+            "z_score": -1.082,
+            "is_burst": false
+          },
+          "topic_volume:Automobile": {
+            "value": 10.0,
+            "z_score": -0.602,
+            "is_burst": false
+          },
+          "topic_volume:Politics": {
+            "value": 904.0,
+            "z_score": 2.066,
+            "is_burst": true
+          },
+          "topic_volume:Religion": {
+            "value": 27.0,
+            "z_score": 0.588,
+            "is_burst": false
+          },
+          "sensationalism_rate": {
+            "value": 0.035257,
+            "z_score": -0.361,
+            "is_burst": false
+          },
+          "negative_rate": {
+            "value": 0.159758,
+            "z_score": 1.277,
+            "is_burst": false
+          }
+        }
+      },
+      {
+        "year_month": "2020-03",
+        "label": "National COVID-19 lockdown announced 24 Mar 2020",
+        "measures": {
+          "topic_volume:World": {
+            "value": 84.0,
+            "z_score": -1.064,
+            "is_burst": false
+          },
+          "topic_volume:Education": {
+            "value": 18.0,
+            "z_score": -0.786,
+            "is_burst": false
+          },
+          "topic_volume:Nation": {
+            "value": 563.0,
+            "z_score": -0.962,
+            "is_burst": false
+          },
+          "topic_volume:Health": {
+            "value": 31.0,
+            "z_score": -0.742,
+            "is_burst": false
+          },
+          "topic_volume:Technology": {
+            "value": 17.0,
+            "z_score": -0.689,
+            "is_burst": false
+          },
+          "topic_volume:Lifestyle": {
+            "value": 120.0,
+            "z_score": -0.682,
+            "is_burst": false
+          },
+          "topic_volume:Entertainment": {
+            "value": 541.0,
+            "z_score": -1.571,
+            "is_burst": false
+          },
+          "topic_volume:Local": {
+            "value": 13199.0,
+            "z_score": 0.193,
+            "is_burst": false
+          },
+          "topic_volume:Environment": {
+            "value": 1.0,
+            "z_score": -1.093,
+            "is_burst": false
+          },
+          "topic_volume:Other": {
+            "value": 17.0,
+            "z_score": -0.565,
+            "is_burst": false
+          },
+          "topic_volume:Business": {
+            "value": 344.0,
+            "z_score": -0.578,
+            "is_burst": false
+          },
+          "topic_volume:Sports": {
+            "value": 80.0,
+            "z_score": -1.333,
+            "is_burst": false
+          },
+          "topic_volume:Automobile": {
+            "value": 1.0,
+            "z_score": -0.93,
+            "is_burst": false
+          },
+          "topic_volume:Religion": {
+            "value": 10.0,
+            "z_score": -0.643,
+            "is_burst": false
+          },
+          "sensationalism_rate": {
+            "value": 0.030813,
+            "z_score": -1.046,
+            "is_burst": false
+          },
+          "negative_rate": {
+            "value": 0.14395,
+            "z_score": 0.091,
+            "is_burst": false
+          }
+        }
+      },
+      {
+        "year_month": "2020-04",
+        "label": "Lockdown extended to 3 May 2020",
+        "measures": {
+          "topic_volume:World": {
+            "value": 34.0,
+            "z_score": -1.337,
+            "is_burst": false
+          },
+          "topic_volume:Education": {
+            "value": 19.0,
+            "z_score": -0.772,
+            "is_burst": false
+          },
+          "topic_volume:Nation": {
+            "value": 439.0,
+            "z_score": -1.286,
+            "is_burst": false
+          },
+          "topic_volume:Health": {
+            "value": 12.0,
+            "z_score": -0.925,
+            "is_burst": false
+          },
+          "topic_volume:Technology": {
+            "value": 3.0,
+            "z_score": -0.752,
+            "is_burst": false
+          },
+          "topic_volume:Lifestyle": {
+            "value": 100.0,
+            "z_score": -0.841,
+            "is_burst": false
+          },
+          "topic_volume:Entertainment": {
+            "value": 383.0,
+            "z_score": -1.8,
+            "is_burst": false
+          },
+          "topic_volume:Local": {
+            "value": 13021.0,
+            "z_score": 0.113,
+            "is_burst": false
+          },
+          "topic_volume:Environment": {
+            "value": 3.0,
+            "z_score": -1.0,
+            "is_burst": false
+          },
+          "topic_volume:Other": {
+            "value": 5.0,
+            "z_score": -0.687,
+            "is_burst": false
+          },
+          "topic_volume:Business": {
+            "value": 391.0,
+            "z_score": -0.537,
+            "is_burst": false
+          },
+          "topic_volume:Sports": {
+            "value": 41.0,
+            "z_score": -1.412,
+            "is_burst": false
+          },
+          "topic_volume:Automobile": {
+            "value": 13.0,
+            "z_score": -0.493,
+            "is_burst": false
+          },
+          "topic_volume:Religion": {
+            "value": 10.0,
+            "z_score": -0.643,
+            "is_burst": false
+          },
+          "sensationalism_rate": {
+            "value": 0.025701,
+            "z_score": -1.835,
+            "is_burst": false
+          },
+          "negative_rate": {
+            "value": 0.10771,
+            "z_score": -2.627,
+            "is_burst": true
+          }
+        }
+      },
+      {
+        "year_month": "2020-05",
+        "label": "Lockdown eased from 18 May 2020",
+        "measures": {
+          "topic_volume:World": {
+            "value": 49.0,
+            "z_score": -1.255,
+            "is_burst": false
+          },
+          "topic_volume:Education": {
+            "value": 18.0,
+            "z_score": -0.786,
+            "is_burst": false
+          },
+          "topic_volume:Nation": {
+            "value": 407.0,
+            "z_score": -1.37,
+            "is_burst": false
+          },
+          "topic_volume:Health": {
+            "value": 6.0,
+            "z_score": -0.982,
+            "is_burst": false
+          },
+          "topic_volume:Technology": {
+            "value": 10.0,
+            "z_score": -0.721,
+            "is_burst": false
+          },
+          "topic_volume:Lifestyle": {
+            "value": 65.0,
+            "z_score": -1.119,
+            "is_burst": false
+          },
+          "topic_volume:Entertainment": {
+            "value": 429.0,
+            "z_score": -1.734,
+            "is_burst": false
+          },
+          "topic_volume:Local": {
+            "value": 13660.0,
+            "z_score": 0.4,
+            "is_burst": false
+          },
+          "topic_volume:Environment": {
+            "value": 2.0,
+            "z_score": -1.047,
+            "is_burst": false
+          },
+          "topic_volume:Other": {
+            "value": 9.0,
+            "z_score": -0.646,
+            "is_burst": false
+          },
+          "topic_volume:Business": {
+            "value": 320.0,
+            "z_score": -0.599,
+            "is_burst": false
+          },
+          "topic_volume:Sports": {
+            "value": 28.0,
+            "z_score": -1.438,
+            "is_burst": false
+          },
+          "topic_volume:Politics": {
+            "value": 1.0,
+            "z_score": -0.445,
+            "is_burst": false
+          },
+          "topic_volume:Religion": {
+            "value": 7.0,
+            "z_score": -0.86,
+            "is_burst": false
+          },
+          "sensationalism_rate": {
+            "value": 0.022917,
+            "z_score": -2.264,
+            "is_burst": true
+          },
+          "negative_rate": {
+            "value": 0.119912,
+            "z_score": -1.712,
+            "is_burst": false
+          }
+        }
+      }
+    ],
+    "fact": {
+      "value": 0,
+      "unit": "months exceeding the z-score threshold",
+      "source": "reports/mining.json:rq2_bursts.detected",
+      "caution": "This is a NULL result and it is the answer. Monthly volume is flat within each year, so no month is a statistical outlier. Lowering the threshold until a spike appeared would be choosing a threshold to manufacture a finding."
+    }
+  },
+  "rq3_sensationalism": {
+    "corpus_rate": 0.037718,
+    "threshold": 0.2208,
+    "ranked": [
+      {
+        "topic": "Education",
+        "topic_group": "Subject",
+        "headline_count": 4450,
+        "risk_signal_count": 487,
+        "risk_signal_rate": 0.109438,
+        "ci95_low": 0.1006,
+        "ci95_high": 0.11895,
+        "sensational_count": 487,
+        "negative_count": 167,
+        "negative_rate": 0.037528,
+        "positive_count": 267,
+        "positive_rate": 0.06,
+        "mean_sentiment": 0.042009,
+        "mean_caps_ratio": 0.076294,
+        "mean_exclamations": 0.002247,
+        "mean_superlatives": 0.006966,
+        "mean_urgency_words": 0.011236,
+        "meets_min_rows": true,
+        "above_corpus_average": true,
+        "below_corpus_average": false
+      },
+      {
+        "topic": "Business",
+        "topic_group": "Subject",
+        "headline_count": 61619,
+        "risk_signal_count": 3579,
+        "risk_signal_rate": 0.058083,
+        "ci95_low": 0.056263,
+        "ci95_high": 0.059957,
+        "sensational_count": 3579,
+        "negative_count": 3600,
+        "negative_rate": 0.058424,
+        "positive_count": 3956,
+        "positive_rate": 0.064201,
+        "mean_sentiment": 0.020309,
+        "mean_caps_ratio": 0.043574,
+        "mean_exclamations": 0.000779,
+        "mean_superlatives": 0.014151,
+        "mean_urgency_words": 0.007546,
+        "meets_min_rows": true,
+        "above_corpus_average": true,
+        "below_corpus_average": false
+      },
+      {
+        "topic": "Politics",
+        "topic_group": "Subject",
+        "headline_count": 4833,
+        "risk_signal_count": 205,
+        "risk_signal_rate": 0.042417,
+        "ci95_low": 0.037089,
+        "ci95_high": 0.048472,
+        "sensational_count": 205,
+        "negative_count": 411,
+        "negative_rate": 0.08504,
+        "positive_count": 322,
+        "positive_rate": 0.066625,
+        "mean_sentiment": -0.013763,
+        "mean_caps_ratio": 0.040187,
+        "mean_exclamations": 0.001035,
+        "mean_superlatives": 0.009104,
+        "mean_urgency_words": 0.004345,
+        "meets_min_rows": true,
+        "above_corpus_average": false,
+        "below_corpus_average": false
+      },
+      {
+        "topic": "Local",
+        "topic_group": "Place",
+        "headline_count": 778859,
+        "risk_signal_count": 30866,
+        "risk_signal_rate": 0.03963,
+        "ci95_low": 0.039199,
+        "ci95_high": 0.040065,
+        "sensational_count": 30866,
+        "negative_count": 130925,
+        "negative_rate": 0.168098,
+        "positive_count": 38757,
+        "positive_rate": 0.049761,
+        "mean_sentiment": -0.099902,
+        "mean_caps_ratio": 0.029864,
+        "mean_exclamations": 0.003595,
+        "mean_superlatives": 0.005887,
+        "mean_urgency_words": 0.008438,
+        "meets_min_rows": true,
+        "above_corpus_average": true,
+        "below_corpus_average": false
+      },
+      {
+        "topic": "Sports",
+        "topic_group": "Subject",
+        "headline_count": 45299,
+        "risk_signal_count": 1767,
+        "risk_signal_rate": 0.039007,
+        "ci95_low": 0.037263,
+        "ci95_high": 0.04083,
+        "sensational_count": 1767,
+        "negative_count": 2471,
+        "negative_rate": 0.054549,
+        "positive_count": 7438,
+        "positive_rate": 0.164198,
+        "mean_sentiment": 0.085292,
+        "mean_caps_ratio": 0.031349,
+        "mean_exclamations": 0.001965,
+        "mean_superlatives": 0.017506,
+        "mean_urgency_words": 0.007947,
+        "meets_min_rows": true,
+        "above_corpus_average": false,
+        "below_corpus_average": false
+      },
+      {
+        "topic": "Nation",
+        "topic_group": "Place",
+        "headline_count": 56770,
+        "risk_signal_count": 1995,
+        "risk_signal_rate": 0.035142,
+        "ci95_low": 0.033658,
+        "ci95_high": 0.036688,
+        "sensational_count": 1995,
+        "negative_count": 8288,
+        "negative_rate": 0.145993,
+        "positive_count": 4001,
+        "positive_rate": 0.070477,
+        "mean_sentiment": -0.059486,
+        "mean_caps_ratio": 0.031639,
+        "mean_exclamations": 0.001321,
+        "mean_superlatives": 0.009494,
+        "mean_urgency_words": 0.010833,
+        "meets_min_rows": true,
+        "above_corpus_average": false,
+        "below_corpus_average": true
+      },
+      {
+        "topic": "Health",
+        "topic_group": "Subject",
+        "headline_count": 6610,
+        "risk_signal_count": 138,
+        "risk_signal_rate": 0.020877,
+        "ci95_low": 0.017699,
+        "ci95_high": 0.024613,
+        "sensational_count": 138,
+        "negative_count": 880,
+        "negative_rate": 0.133132,
+        "positive_count": 617,
+        "positive_rate": 0.093343,
+        "mean_sentiment": -0.017088,
+        "mean_caps_ratio": 0.01022,
+        "mean_exclamations": 0.070499,
+        "mean_superlatives": 0.015885,
+        "mean_urgency_words": 0.008169,
+        "meets_min_rows": true,
+        "above_corpus_average": false,
+        "below_corpus_average": true
+      },
+      {
+        "topic": "Technology",
+        "topic_group": "Subject",
+        "headline_count": 10453,
+        "risk_signal_count": 208,
+        "risk_signal_rate": 0.019899,
+        "ci95_low": 0.017392,
+        "ci95_high": 0.022757,
+        "sensational_count": 208,
+        "negative_count": 609,
+        "negative_rate": 0.058261,
+        "positive_count": 863,
+        "positive_rate": 0.08256,
+        "mean_sentiment": 0.038186,
+        "mean_caps_ratio": 0.01844,
+        "mean_exclamations": 0.0022,
+        "mean_superlatives": 0.027169,
+        "mean_urgency_words": 0.009854,
+        "meets_min_rows": true,
+        "above_corpus_average": false,
+        "below_corpus_average": true
+      }
+    ],
+    "excluded_uninformative": {
+      "topics": [
+        "Unknown",
+        "Other"
+      ],
+      "reason": "These carry no editorial subject, so their score measures the absence of a filing decision rather than the language used. They are excluded from the headline ranking."
+    },
+    "trend_by_year": [
+      {
+        "year": 2015,
+        "headline_count": 125137,
+        "risk_signal_count": 6110,
+        "risk_signal_rate": 0.048826,
+        "ci95_low": 0.047646,
+        "ci95_high": 0.050034,
+        "mean_sentiment": -0.034891,
+        "mean_sensational_score": 0.037439
+      },
+      {
+        "year": 2016,
+        "headline_count": 248065,
+        "risk_signal_count": 9845,
+        "risk_signal_rate": 0.039687,
+        "ci95_low": 0.038926,
+        "ci95_high": 0.040463,
+        "mean_sentiment": -0.051736,
+        "mean_sensational_score": 0.033963
+      },
+      {
+        "year": 2017,
+        "headline_count": 241687,
+        "risk_signal_count": 8671,
+        "risk_signal_rate": 0.035877,
+        "ci95_low": 0.035143,
+        "ci95_high": 0.036626,
+        "mean_sentiment": -0.050863,
+        "mean_sensational_score": 0.034498
+      },
+      {
+        "year": 2018,
+        "headline_count": 240220,
+        "risk_signal_count": 8309,
+        "risk_signal_rate": 0.034589,
+        "ci95_low": 0.033866,
+        "ci95_high": 0.035327,
+        "mean_sentiment": -0.072089,
+        "mean_sensational_score": 0.033063
+      },
+      {
+        "year": 2019,
+        "headline_count": 170357,
+        "risk_signal_count": 6175,
+        "risk_signal_rate": 0.036247,
+        "ci95_low": 0.03537,
+        "ci95_high": 0.037145,
+        "mean_sentiment": -0.079069,
+        "mean_sensational_score": 0.035218
+      },
+      {
+        "year": 2020,
+        "headline_count": 87961,
+        "risk_signal_count": 2861,
+        "risk_signal_rate": 0.032526,
+        "ci95_low": 0.031374,
+        "ci95_high": 0.033719,
+        "mean_sentiment": -0.069898,
+        "mean_sensational_score": 0.032156
+      }
+    ],
+    "trend_summary": {
+      "from_year": 2015,
+      "to_year": 2020,
+      "from_rate": 0.048826,
+      "to_rate": 0.032526,
+      "change_pp": -1.63,
+      "intervals_overlap": false
+    },
+    "sensitivity": {
+      "thresholds": [
+        0.05,
+        0.1,
+        0.15,
+        0.2,
+        0.2208,
+        0.25,
+        0.3,
+        0.4
+      ],
+      "rows": [
+        {
+          "threshold": 0.05,
+          "is_chosen_threshold": false,
+          "corpus_rate": 0.218236,
+          "ranking": [
+            "Education",
+            "Unknown",
+            "Politics",
+            "Business",
+            "Nation",
+            "Other",
+            "Sports",
+            "Health",
+            "Local",
+            "Lifestyle",
+            "Technology",
+            "Environment",
+            "Entertainment",
+            "World"
+          ],
+          "top3": [
+            "Education",
+            "Unknown",
+            "Politics"
+          ],
+          "top1": "Education"
+        },
+        {
+          "threshold": 0.1,
+          "is_chosen_threshold": false,
+          "corpus_rate": 0.184018,
+          "ranking": [
+            "Education",
+            "Unknown",
+            "Business",
+            "Politics",
+            "Sports",
+            "Nation",
+            "Other",
+            "Local",
+            "Technology",
+            "Health",
+            "Lifestyle",
+            "Environment",
+            "Entertainment",
+            "World"
+          ],
+          "top3": [
+            "Education",
+            "Unknown",
+            "Business"
+          ],
+          "top1": "Education"
+        },
+        {
+          "threshold": 0.15,
+          "is_chosen_threshold": false,
+          "corpus_rate": 0.090023,
+          "ranking": [
+            "Unknown",
+            "Education",
+            "Business",
+            "Politics",
+            "Sports",
+            "Local",
+            "Nation",
+            "Other",
+            "Technology",
+            "Health",
+            "Environment",
+            "Lifestyle",
+            "Entertainment",
+            "World"
+          ],
+          "top3": [
+            "Unknown",
+            "Education",
+            "Business"
+          ],
+          "top1": "Unknown"
+        },
+        {
+          "threshold": 0.2,
+          "is_chosen_threshold": false,
+          "corpus_rate": 0.040585,
+          "ranking": [
+            "Unknown",
+            "Education",
+            "Business",
+            "Politics",
+            "Sports",
+            "Local",
+            "Nation",
+            "Other",
+            "Health",
+            "Technology",
+            "Lifestyle",
+            "Entertainment",
+            "Environment",
+            "World"
+          ],
+          "top3": [
+            "Unknown",
+            "Education",
+            "Business"
+          ],
+          "top1": "Unknown"
+        },
+        {
+          "threshold": 0.2208,
+          "is_chosen_threshold": true,
+          "corpus_rate": 0.037718,
+          "ranking": [
+            "Unknown",
+            "Education",
+            "Business",
+            "Politics",
+            "Local",
+            "Sports",
+            "Nation",
+            "Other",
+            "Health",
+            "Technology",
+            "Lifestyle",
+            "Entertainment",
+            "Environment",
+            "World"
+          ],
+          "top3": [
+            "Unknown",
+            "Education",
+            "Business"
+          ],
+          "top1": "Unknown"
+        },
+        {
+          "threshold": 0.25,
+          "is_chosen_threshold": false,
+          "corpus_rate": 0.023381,
+          "ranking": [
+            "Unknown",
+            "Education",
+            "Business",
+            "Politics",
+            "Local",
+            "Sports",
+            "Nation",
+            "Other",
+            "Health",
+            "Technology",
+            "Lifestyle",
+            "Entertainment",
+            "Environment",
+            "World"
+          ],
+          "top3": [
+            "Unknown",
+            "Education",
+            "Business"
+          ],
+          "top1": "Unknown"
+        },
+        {
+          "threshold": 0.3,
+          "is_chosen_threshold": false,
+          "corpus_rate": 0.011968,
+          "ranking": [
+            "Unknown",
+            "Education",
+            "Business",
+            "Politics",
+            "Local",
+            "Nation",
+            "Sports",
+            "Health",
+            "Other",
+            "Technology",
+            "Lifestyle",
+            "Entertainment",
+            "Environment",
+            "World"
+          ],
+          "top3": [
+            "Unknown",
+            "Education",
+            "Business"
+          ],
+          "top1": "Unknown"
+        },
+        {
+          "threshold": 0.4,
+          "is_chosen_threshold": false,
+          "corpus_rate": 0.000427,
+          "ranking": [
+            "Unknown",
+            "Health",
+            "Other",
+            "Lifestyle",
+            "Local",
+            "Business",
+            "Nation",
+            "Entertainment",
+            "Education",
+            "Sports",
+            "Technology",
+            "Environment",
+            "Politics",
+            "World"
+          ],
+          "top3": [
+            "Unknown",
+            "Health",
+            "Other"
+          ],
+          "top1": "Unknown"
+        }
+      ],
+      "min_topic_rows": 1000,
+      "topics_considered": 14,
+      "distinct_top1_across_thresholds": [
+        "Education",
+        "Unknown"
+      ],
+      "distinct_top1_excluding_uninformative": [
+        "Education",
+        "Health"
+      ],
+      "ranking_is_stable": false,
+      "ranking_is_stable_including_uninformative": false,
+      "stability_note": "`Unknown` appears as the top topic at some thresholds because it is a filing gap, not a subject. Stability is judged on the informative topics only; the raw count is reported alongside so the difference is visible rather than hidden.",
+      "chosen_threshold_ranking": [
+        "Unknown",
+        "Education",
+        "Business",
+        "Politics",
+        "Local",
+        "Sports",
+        "Nation",
+        "Other",
+        "Health",
+        "Technology",
+        "Lifestyle",
+        "Entertainment",
+        "Environment",
+        "World"
+      ],
+      "note": "A ranking that changes its top topic as the cut-off moves is an artefact of the cut-off. Both facts are reported."
+    },
+    "fact": {
+      "value": 0.037718,
+      "unit": "risk-signal rate, share of headlines over the sensationalism threshold",
+      "source": "reports/mining.json:rq3_sensationalism.by_topic.corpus_rate",
+      "caution": "A STYLE measure on unlabelled headlines. It is a risk-signal rate and is NOT a fake-news rate. The threshold is the measured 95th percentile, a chosen cut-off, so the report must show the sensitivity table."
+    }
+  },
+  "rq4_clusters": {
+    "ran": true,
+    "chosen_k": 4,
+    "silhouette": 0.2582,
+    "silhouette_is_strong": true,
+    "dominant_cluster_share": 0.9488,
+    "structure_is_concentrated": true,
+    "concentration_note": "One cluster holds 94.88% of the sample and 3 further clusters hold at least 1% each. A high silhouette in this shape does not mean the corpus is well clustered: it means a small, well-separated topical minority exists and the remainder is undifferentiated. Read the score and the shape together.",
+    "no_preferred_k": false,
+    "k_note": "Silhouette peaks at k=4 and falls away on both sides, so this k is a genuine optimum rather than an edge of the search range.",
+    "k_candidates": [
+      {
+        "k": 4,
+        "silhouette": 0.2582
+      },
+      {
+        "k": 5,
+        "silhouette": 0.2261
+      },
+      {
+        "k": 6,
+        "silhouette": 0.2269
+      },
+      {
+        "k": 7,
+        "silhouette": 0.1748
+      },
+      {
+        "k": 8,
+        "silhouette": 0.2073
+      },
+      {
+        "k": 9,
+        "silhouette": 0.1824
+      },
+      {
+        "k": 10,
+        "silhouette": 0.1855
+      },
+      {
+        "k": 11,
+        "silhouette": 0.1873
+      },
+      {
+        "k": 12,
+        "silhouette": 0.1921
+      }
+    ],
+    "sample_size": 60000,
+    "svd_components": 100,
+    "svd_variance_explained": 0.092,
+    "clusters": [
+      {
+        "cluster_id": 0,
+        "size": 56930,
+        "share_of_sample": 0.9488,
+        "top_terms": [
+          "new",
+          "india",
+          "says",
+          "held",
+          "man",
+          "city",
+          "govt",
+          "delhi",
+          "cops",
+          "police",
+          "bjp",
+          "day"
+        ],
+        "dominant_supplied_topics": [
+          {
+            "topic": "Local",
+            "count": 39406,
+            "share": 0.6922
+          },
+          {
+            "topic": "Entertainment",
+            "count": 5186,
+            "share": 0.0911
+          },
+          {
+            "topic": "Business",
+            "count": 3165,
+            "share": 0.0556
+          },
+          {
+            "topic": "Nation",
+            "count": 2992,
+            "share": 0.0526
+          },
+          {
+            "topic": "Sports",
+            "count": 2369,
+            "share": 0.0416
+          }
+        ]
+      },
+      {
+        "cluster_id": 2,
+        "size": 1519,
+        "share_of_sample": 0.0253,
+        "top_terms": [
+          "rs",
+          "crore",
+          "rs crore",
+          "rs lakh",
+          "lakh",
+          "worth",
+          "worth rs",
+          "cr",
+          "rs cr",
+          "seized",
+          "held",
+          "man"
+        ],
+        "dominant_supplied_topics": [
+          {
+            "topic": "Local",
+            "count": 1259,
+            "share": 0.8288
+          },
+          {
+            "topic": "Business",
+            "count": 137,
+            "share": 0.0902
+          },
+          {
+            "topic": "Nation",
+            "count": 53,
+            "share": 0.0349
+          },
+          {
+            "topic": "Entertainment",
+            "count": 34,
+            "share": 0.0224
+          },
+          {
+            "topic": "Technology",
+            "count": 21,
+            "share": 0.0138
+          }
+        ]
+      },
+      {
+        "cluster_id": 1,
+        "size": 776,
+        "share_of_sample": 0.0129,
+        "top_terms": [
+          "road",
+          "road accident",
+          "accident",
+          "garbage",
+          "killed",
+          "main road",
+          "main",
+          "killed road",
+          "accidents",
+          "traffic",
+          "road safety",
+          "road accidents"
+        ],
+        "dominant_supplied_topics": [
+          {
+            "topic": "Local",
+            "count": 734,
+            "share": 0.9459
+          },
+          {
+            "topic": "Nation",
+            "count": 17,
+            "share": 0.0219
+          },
+          {
+            "topic": "Sports",
+            "count": 8,
+            "share": 0.0103
+          },
+          {
+            "topic": "Entertainment",
+            "count": 6,
+            "share": 0.0077
+          },
+          {
+            "topic": "World",
+            "count": 5,
+            "share": 0.0064
+          }
+        ]
+      },
+      {
+        "cluster_id": 3,
+        "size": 775,
+        "share_of_sample": 0.0129,
+        "top_terms": [
+          "old",
+          "year old",
+          "year",
+          "yr old",
+          "yr",
+          "old girl",
+          "girl",
+          "man",
+          "dies",
+          "old boy",
+          "old man",
+          "boy"
+        ],
+        "dominant_supplied_topics": [
+          {
+            "topic": "Local",
+            "count": 739,
+            "share": 0.9535
+          },
+          {
+            "topic": "Entertainment",
+            "count": 8,
+            "share": 0.0103
+          },
+          {
+            "topic": "Nation",
+            "count": 8,
+            "share": 0.0103
+          },
+          {
+            "topic": "Lifestyle",
+            "count": 4,
+            "share": 0.0052
+          },
+          {
+            "topic": "Sports",
+            "count": 3,
+            "share": 0.0039
+          }
+        ]
+      }
+    ],
+    "stability": {
+      "ran": true,
+      "k": 4,
+      "documents": 60000,
+      "seeds": [
+        20251002,
+        20251003
+      ],
+      "agreement_ratio": 0.9669,
+      "is_stable": true,
+      "note": "The same documents are clustered twice with different K-Means seeds, so only the initialisation varies. High agreement means the partition is a property of the data; low agreement means the clusters are an artefact of the starting points."
+    },
+    "fact": {
+      "value": 0.2582,
+      "unit": "silhouette score, higher is better separated",
+      "source": "reports/mining.json:rq4_clusters.silhouette",
+      "caution": "Read this with the cluster sizes, not alone. Silhouette rewards a large cluster sitting far from a few small tight ones, and that is the shape here: most headlines are undifferentiated while a small topical minority is cleanly separated. The score also depends entirely on the TF-IDF settings \u2014 an earlier run that admitted numerals and stop words measured 0.068 on the same data."
+    }
+  },
+  "rq5_association_rules": {
+    "ran": true,
+    "rule_count": 644,
+    "thresholds": {
+      "min_support": 0.01,
+      "min_confidence": 0.3,
+      "max_len": 3
+    },
+    "apriori_seconds": 0.9349,
+    "fpgrowth_seconds": 1.4344,
+    "rule_sets_identical": true,
+    "fpgrowth_speedup": 0.65,
+    "tautological_rules": 313,
+    "substantive_rules": 331,
+    "redundancy_note": "313 of 644 rules are tautologies with lift exactly 1.000: the consequent is implied by the antecedent, as in `2015 => Local`. The transaction items are not independent \u2014 the sensational flag and the sentiment band are derived from the same score, and a year implies every other item carrying that year. Redundant items inflate the rule count without adding information, which is why 331 substantive rules are reported alongside the 644 total.",
+    "mean_items": 6.0,
+    "attribute_items": [
+      "topic",
+      "year",
+      "sentiment_band",
+      "sensational_flag",
+      "weekday_flag",
+      "multi_category_flag"
+    ],
+    "transactions_sampled": 200000,
+    "item_vocabulary_size": 31,
+    "top_rules": [
+      {
+        "antecedent": [
+          "Business"
+        ],
+        "consequent": [
+          "2017",
+          "weekday"
+        ],
+        "support": 0.027155,
+        "confidence": 0.492117,
+        "lift": 3.181206,
+        "leverage": 0.018619,
+        "is_informative": true,
+        "beats_base_rate": true
+      },
+      {
+        "antecedent": [
+          "Business"
+        ],
+        "consequent": [
+          "2017",
+          "neutral"
+        ],
+        "support": 0.02836,
+        "confidence": 0.513954,
+        "lift": 2.968775,
+        "leverage": 0.018807,
+        "is_informative": true,
+        "beats_base_rate": true
+      },
+      {
+        "antecedent": [
+          "Business",
+          "weekday"
+        ],
+        "consequent": [
+          "2017"
+        ],
+        "support": 0.027155,
+        "confidence": 0.603981,
+        "lift": 2.77929,
+        "leverage": 0.017385,
+        "is_informative": true,
+        "beats_base_rate": true
+      },
+      {
+        "antecedent": [
+          "Business"
+        ],
+        "consequent": [
+          "2017",
+          "single_category"
+        ],
+        "support": 0.031905,
+        "confidence": 0.578199,
+        "lift": 2.76445,
+        "leverage": 0.020364,
+        "is_informative": true,
+        "beats_base_rate": true
+      },
+      {
+        "antecedent": [
+          "Business",
+          "single_category"
+        ],
+        "consequent": [
+          "2017"
+        ],
+        "support": 0.031905,
+        "confidence": 0.588653,
+        "lift": 2.708755,
+        "leverage": 0.020127,
+        "is_informative": true,
+        "beats_base_rate": true
+      },
+      {
+        "antecedent": [
+          "Business",
+          "sensational=normal"
+        ],
+        "consequent": [
+          "2017"
+        ],
+        "support": 0.03054,
+        "confidence": 0.5868,
+        "lift": 2.700227,
+        "leverage": 0.01923,
+        "is_informative": true,
+        "beats_base_rate": true
+      },
+      {
+        "antecedent": [
+          "Business"
+        ],
+        "consequent": [
+          "2017"
+        ],
+        "support": 0.03229,
+        "confidence": 0.585176,
+        "lift": 2.692754,
+        "leverage": 0.020299,
+        "is_informative": true,
+        "beats_base_rate": true
+      },
+      {
+        "antecedent": [
+          "Business",
+          "neutral"
+        ],
+        "consequent": [
+          "2017"
+        ],
+        "support": 0.02836,
+        "confidence": 0.584441,
+        "lift": 2.689373,
+        "leverage": 0.017815,
+        "is_informative": true,
+        "beats_base_rate": true
+      }
+    ],
+    "top_rules_by_confidence": [
+      {
+        "antecedent": [
+          "2017",
+          "Sports"
+        ],
+        "consequent": [
+          "single_category"
+        ],
+        "support": 0.011225,
+        "confidence": 0.999555,
+        "lift": 1.037851,
+        "leverage": 0.000409,
+        "is_informative": true,
+        "beats_base_rate": true
+      },
+      {
+        "antecedent": [
+          "2018",
+          "Entertainment"
+        ],
+        "consequent": [
+          "sensational=normal"
+        ],
+        "support": 0.020755,
+        "confidence": 0.997357,
+        "lift": 1.036377,
+        "leverage": 0.000728,
+        "is_informative": true,
+        "beats_base_rate": true
+      },
+      {
+        "antecedent": [
+          "World"
+        ],
+        "consequent": [
+          "sensational=normal"
+        ],
+        "support": 0.015375,
+        "confidence": 0.995468,
+        "lift": 1.034413,
+        "leverage": 0.000512,
+        "is_informative": true,
+        "beats_base_rate": true
+      },
+      {
+        "antecedent": [
+          "World",
+          "single_category"
+        ],
+        "consequent": [
+          "sensational=normal"
+        ],
+        "support": 0.014665,
+        "confidence": 0.995249,
+        "lift": 1.034187,
+        "leverage": 0.000485,
+        "is_informative": true,
+        "beats_base_rate": true
+      },
+      {
+        "antecedent": [
+          "World",
+          "neutral"
+        ],
+        "consequent": [
+          "sensational=normal"
+        ],
+        "support": 0.01073,
+        "confidence": 0.9949,
+        "lift": 1.033824,
+        "leverage": 0.000351,
+        "is_informative": true,
+        "beats_base_rate": true
+      },
+      {
+        "antecedent": [
+          "World",
+          "weekday"
+        ],
+        "consequent": [
+          "sensational=normal"
+        ],
+        "support": 0.01024,
+        "confidence": 0.994175,
+        "lift": 1.03307,
+        "leverage": 0.000328,
+        "is_informative": true,
+        "beats_base_rate": true
+      },
+      {
+        "antecedent": [
+          "2019",
+          "Entertainment"
+        ],
+        "consequent": [
+          "sensational=normal"
+        ],
+        "support": 0.010115,
+        "confidence": 0.993127,
+        "lift": 1.031981,
+        "leverage": 0.000313,
+        "is_informative": true,
+        "beats_base_rate": true
+      },
+      {
+        "antecedent": [
+          "2017",
+          "Entertainment"
+        ],
+        "consequent": [
+          "sensational=normal"
+        ],
+        "support": 0.01869,
+        "confidence": 0.993092,
+        "lift": 1.031945,
+        "leverage": 0.000579,
+        "is_informative": true,
+        "beats_base_rate": true
+      }
+    ],
+    "informative_rules": [
+      {
+        "antecedent": [
+          "Business"
+        ],
+        "consequent": [
+          "2017",
+          "weekday"
+        ],
+        "support": 0.027155,
+        "confidence": 0.492117,
+        "lift": 3.181206,
+        "leverage": 0.018619,
+        "is_informative": true,
+        "beats_base_rate": true
+      },
+      {
+        "antecedent": [
+          "Business"
+        ],
+        "consequent": [
+          "2017",
+          "neutral"
+        ],
+        "support": 0.02836,
+        "confidence": 0.513954,
+        "lift": 2.968775,
+        "leverage": 0.018807,
+        "is_informative": true,
+        "beats_base_rate": true
+      },
+      {
+        "antecedent": [
+          "Business",
+          "weekday"
+        ],
+        "consequent": [
+          "2017"
+        ],
+        "support": 0.027155,
+        "confidence": 0.603981,
+        "lift": 2.77929,
+        "leverage": 0.017385,
+        "is_informative": true,
+        "beats_base_rate": true
+      },
+      {
+        "antecedent": [
+          "Business"
+        ],
+        "consequent": [
+          "2017",
+          "single_category"
+        ],
+        "support": 0.031905,
+        "confidence": 0.578199,
+        "lift": 2.76445,
+        "leverage": 0.020364,
+        "is_informative": true,
+        "beats_base_rate": true
+      },
+      {
+        "antecedent": [
+          "Business",
+          "single_category"
+        ],
+        "consequent": [
+          "2017"
+        ],
+        "support": 0.031905,
+        "confidence": 0.588653,
+        "lift": 2.708755,
+        "leverage": 0.020127,
+        "is_informative": true,
+        "beats_base_rate": true
+      },
+      {
+        "antecedent": [
+          "Business",
+          "sensational=normal"
+        ],
+        "consequent": [
+          "2017"
+        ],
+        "support": 0.03054,
+        "confidence": 0.5868,
+        "lift": 2.700227,
+        "leverage": 0.01923,
+        "is_informative": true,
+        "beats_base_rate": true
+      },
+      {
+        "antecedent": [
+          "Business"
+        ],
+        "consequent": [
+          "2017"
+        ],
+        "support": 0.03229,
+        "confidence": 0.585176,
+        "lift": 2.692754,
+        "leverage": 0.020299,
+        "is_informative": true,
+        "beats_base_rate": true
+      },
+      {
+        "antecedent": [
+          "Business",
+          "neutral"
+        ],
+        "consequent": [
+          "2017"
+        ],
+        "support": 0.02836,
+        "confidence": 0.584441,
+        "lift": 2.689373,
+        "leverage": 0.017815,
+        "is_informative": true,
+        "beats_base_rate": true
+      }
+    ],
+    "lift_caveat": "The highest-lift table is not dominated by the partial final period. Lift is still maximised by rare consequents in general, so the confidence table below is the more informative of the two.",
+    "keyword_run": {
+      "rule_count": 0,
+      "mean_items": 1.992,
+      "sampled": 100000,
+      "caveat": "Mean 1.992 items per transaction. The 300-term vocabulary is dominated by functional words, so these transactions are close to empty and the rules are weak by construction. Reported for completeness, not as a finding."
+    },
+    "fact": {
+      "value": 644,
+      "unit": "association rules at support >= 0.01",
+      "source": "reports/mining.json:rq5_association_rules.attribute_rules",
+      "caution": "Association, not causation. A rule states two attributes co-occur more often than chance. Transactions are ATTRIBUTES, not keywords: the 300-term keyword vocabulary yields only 1.992 items per headline and produced zero rules at these thresholds, so keyword rules would have reported sparsity as a pattern."
+    }
+  },
+  "rq6_market_association": {
+    "ran": true,
+    "trading_days_paired": 1235,
+    "measures": {
+      "headline_volume": {
+        "strongest_lag": 0,
+        "pearson_r": 0.02304,
+        "spearman_rho": 0.02699,
+        "p_value": 0.418595,
+        "significant": false,
+        "by_lag": [
+          {
+            "lag_trading_days": 0,
+            "n": 1235,
+            "pearson_r": 0.02304,
+            "spearman_rho": 0.02699,
+            "p_value": 0.418595,
+            "significant_at_alpha": false
+          },
+          {
+            "lag_trading_days": 1,
+            "n": 1234,
+            "pearson_r": 0.01672,
+            "spearman_rho": 0.01274,
+            "p_value": 0.557435,
+            "significant_at_alpha": false
+          },
+          {
+            "lag_trading_days": 2,
+            "n": 1233,
+            "pearson_r": 0.02108,
+            "spearman_rho": 0.04779,
+            "p_value": 0.459644,
+            "significant_at_alpha": false
+          },
+          {
+            "lag_trading_days": 3,
+            "n": 1232,
+            "pearson_r": 0.0119,
+            "spearman_rho": -0.01424,
+            "p_value": 0.676499,
+            "significant_at_alpha": false
+          },
+          {
+            "lag_trading_days": 5,
+            "n": 1230,
+            "pearson_r": 0.01003,
+            "spearman_rho": 0.01478,
+            "p_value": 0.725183,
+            "significant_at_alpha": false
+          }
+        ]
+      },
+      "mean_sentiment": {
+        "strongest_lag": 0,
+        "pearson_r": 0.04593,
+        "spearman_rho": 0.06076,
+        "p_value": 0.106654,
+        "significant": false,
+        "by_lag": [
+          {
+            "lag_trading_days": 0,
+            "n": 1235,
+            "pearson_r": 0.04593,
+            "spearman_rho": 0.06076,
+            "p_value": 0.106654,
+            "significant_at_alpha": false
+          },
+          {
+            "lag_trading_days": 1,
+            "n": 1234,
+            "pearson_r": -0.00705,
+            "spearman_rho": -0.03435,
+            "p_value": 0.804629,
+            "significant_at_alpha": false
+          },
+          {
+            "lag_trading_days": 2,
+            "n": 1233,
+            "pearson_r": -0.03968,
+            "spearman_rho": -0.019,
+            "p_value": 0.163763,
+            "significant_at_alpha": false
+          },
+          {
+            "lag_trading_days": 3,
+            "n": 1232,
+            "pearson_r": -0.03621,
+            "spearman_rho": -0.02852,
+            "p_value": 0.204075,
+            "significant_at_alpha": false
+          },
+          {
+            "lag_trading_days": 5,
+            "n": 1230,
+            "pearson_r": -0.03895,
+            "spearman_rho": -0.02654,
+            "p_value": 0.172149,
+            "significant_at_alpha": false
+          }
+        ]
+      },
+      "mean_sensational_score": {
+        "strongest_lag": 5,
+        "pearson_r": 0.0748,
+        "spearman_rho": 0.06553,
+        "p_value": 0.008681,
+        "significant": true,
+        "by_lag": [
+          {
+            "lag_trading_days": 0,
+            "n": 1235,
+            "pearson_r": 0.03305,
+            "spearman_rho": -0.002,
+            "p_value": 0.2458,
+            "significant_at_alpha": false
+          },
+          {
+            "lag_trading_days": 1,
+            "n": 1234,
+            "pearson_r": -0.0263,
+            "spearman_rho": -0.00697,
+            "p_value": 0.355932,
+            "significant_at_alpha": false
+          },
+          {
+            "lag_trading_days": 2,
+            "n": 1233,
+            "pearson_r": 0.00624,
+            "spearman_rho": 0.01606,
+            "p_value": 0.826846,
+            "significant_at_alpha": false
+          },
+          {
+            "lag_trading_days": 3,
+            "n": 1232,
+            "pearson_r": -0.00502,
+            "spearman_rho": 0.02004,
+            "p_value": 0.860149,
+            "significant_at_alpha": false
+          },
+          {
+            "lag_trading_days": 5,
+            "n": 1230,
+            "pearson_r": 0.0748,
+            "spearman_rho": 0.06553,
+            "p_value": 0.008681,
+            "significant_at_alpha": true
+          }
+        ]
+      }
+    },
+    "any_significant": true,
+    "significance_accounting": {
+      "tests_run": 15,
+      "alpha": 0.05,
+      "expected_false_positives": 0.75,
+      "significant_results": [
+        {
+          "measure": "mean_sensational_score",
+          "lag": 5,
+          "p_value": 0.008681,
+          "pearson_r": 0.0748
+        }
+      ],
+      "exceeds_chance": true,
+      "note": "A significant result among many tests is expected. Count the significant results against the expected false positives before treating any of them as a finding."
+    },
+    "volatility": {
+      "ran": true,
+      "topic": "Business",
+      "observations": 1235,
+      "measures": {
+        "mean_sentiment": {
+          "pearson_r": -0.02258,
+          "p_value": 0.427923,
+          "significant_at_alpha": false,
+          "n": 1235,
+          "r_squared": 0.00051,
+          "variance_explained_pct": 0.051
+        },
+        "mean_sensational_score": {
+          "pearson_r": 0.02358,
+          "p_value": 0.407775,
+          "significant_at_alpha": false,
+          "n": 1235,
+          "r_squared": 0.00056,
+          "variance_explained_pct": 0.056
+        },
+        "log_headline_volume": {
+          "pearson_r": -0.28272,
+          "p_value": 0.0,
+          "significant_at_alpha": true,
+          "n": 1235,
+          "r_squared": 0.07993,
+          "variance_explained_pct": 7.993
+        }
+      },
+      "strongest": {
+        "pearson_r": -0.28272,
+        "p_value": 0.0,
+        "significant_at_alpha": true,
+        "n": 1235,
+        "r_squared": 0.07993,
+        "variance_explained_pct": 7.993,
+        "name": "log_headline_volume"
+      },
+      "any_significant": true,
+      "note": "Volatility is null until 20 sessions are available, so this uses 1235 of the trading days in the window. Association only. A significant coefficient here is not evidence of an effect: headline volume and market volatility both respond to the same underlying events, and nothing here separates their directions."
+    },
+    "fact": {
+      "value": 0.0748,
+      "unit": "largest absolute Pearson r against daily RETURN, across measures and lags",
+      "source": "reports/mining.json:rq6_market_association",
+      "caution": "ASSOCIATION ONLY. Against daily returns the relationship is negligible. Against 20-day VOLATILITY it is not: log headline volume correlates at about -0.28, which is a real association and still not an effect, because both respond to the same underlying events."
+    }
+  },
+  "rq7_classifier": {
+    "ran": true,
+    "labelled_statements": 51110,
+    "class_counts": {
+      "FAKE": 17426,
+      "REAL": 33684
+    },
+    "baseline": 0.659049,
+    "chosen_model": "logistic_regression",
+    "test_count": 15333,
+    "test_size": 0.3,
+    "metrics": {
+      "accuracy": 0.957086,
+      "majority_baseline_accuracy": 0.659049,
+      "lift_over_baseline_pp": 29.8037,
+      "beats_baseline": true,
+      "per_class": {
+        "FAKE": {
+          "precision": 0.958467,
+          "recall": 0.913734,
+          "f1": 0.935566,
+          "support": 5228
+        },
+        "REAL": {
+          "precision": 0.956421,
+          "recall": 0.979515,
+          "f1": 0.96783,
+          "support": 10105
+        }
+      },
+      "confusion_matrix": {
+        "labels": [
+          "FAKE",
+          "REAL"
+        ],
+        "rows_are_actual": [
+          "FAKE",
+          "REAL"
+        ],
+        "matrix": [
+          [
+            4777,
+            451
+          ],
+          [
+            207,
+            9898
+          ]
+        ],
+        "reading": "row = actual class, column = predicted. The bottom-left cell is fake statements missed, which is the expensive error."
+      },
+      "fake_recall": 0.913734,
+      "fake_precision": 0.958467
+    },
+    "models": {
+      "naive_bayes": {
+        "accuracy": 0.954021,
+        "fake_recall": 0.907804
+      },
+      "complement_nb": {
+        "accuracy": 0.94626,
+        "fake_recall": 0.925593
+      },
+      "logistic_regression": {
+        "accuracy": 0.957086,
+        "fake_recall": 0.913734
+      }
+    },
+    "train_cv_accuracy": {
+      "naive_bayes": 0.954831,
+      "complement_nb": 0.947872,
+      "logistic_regression": 0.957654
+    },
+    "top_terms": {
+      "toward_real": [
+        "sc",
+        "says",
+        "covid",
+        "to",
+        "for",
+        "centre",
+        "dies",
+        "seeks",
+        "maharashtra",
+        "talks",
+        "cases",
+        "court",
+        "govt",
+        "tells",
+        "against"
+      ],
+      "toward_fake": [
+        "fake",
+        "fact",
+        "did",
+        "fact check",
+        "check",
+        "video",
+        "viral",
+        "not",
+        "false",
+        "shared",
+        "photo",
+        "image",
+        "falsely",
+        "no",
+        "shared as"
+      ]
+    },
+    "upper_bound_caveat": "Part of IFND's Fake class is LSTM-generated augmentation of real statements, which is easier to distinguish than a fake article written by a person. This accuracy is therefore an upper bound on performance against genuine misinformation.",
+    "fact": {
+      "value": 0.957086,
+      "unit": "accuracy on a held-out 30% test split",
+      "source": "reports/mining.json:rq7_classifier.chosen_test_metrics",
+      "caution": "The ONLY accuracy claim in this project, because IFND is the only source with ground truth. The majority baseline is 0.659049, not 0.5, so accuracy alone is meaningless. Part of the Fake class is LSTM-augmented, so this is an UPPER BOUND."
+    }
+  },
+  "mining_guard_summary": {
+    "total": 6,
+    "passed": 6,
+    "failed": []
+  },
+  "guards": {
+    "checks": [
+      {
+        "check": "headlines_in_window_present",
+        "passed": true,
+        "detail": "1,113,427 headlines in the analysis window"
+      },
+      {
+        "check": "headlines_in_window_sufficient",
+        "passed": true,
+        "detail": "1,113,427 rows, floor for a rate is 1000"
+      },
+      {
+        "check": "labelled_statements_present",
+        "passed": true,
+        "detail": "51,110 labelled statements"
+      },
+      {
+        "check": "trading_days_present",
+        "passed": true,
+        "detail": "1,235 trading days in the window"
+      },
+      {
+        "check": "market_correlation_has_enough_observations",
+        "passed": true,
+        "detail": "1235 paired trading days, floor is 100"
+      },
+      {
+        "check": "rq1_topic_mix_present",
+        "passed": true,
+        "detail": "topic mix section has content"
+      },
+      {
+        "check": "rq2_bursts_present",
+        "passed": true,
+        "detail": "bursts section has content"
+      },
+      {
+        "check": "rq3_sensationalism_present",
+        "passed": true,
+        "detail": "sensationalism section has content"
+      },
+      {
+        "check": "rq4_clusters_present",
+        "passed": true,
+        "detail": "clustering section has content"
+      },
+      {
+        "check": "rq4_clusters_ran",
+        "passed": true,
+        "detail": "clustering ran"
+      },
+      {
+        "check": "rq5_association_rules_present",
+        "passed": true,
+        "detail": "association rules section has content"
+      },
+      {
+        "check": "rq6_market_association_present",
+        "passed": true,
+        "detail": "market association section has content"
+      },
+      {
+        "check": "rq7_classifier_present",
+        "passed": true,
+        "detail": "classifier section has content"
+      },
+      {
+        "check": "rq7_classifier_ran",
+        "passed": true,
+        "detail": "classifier ran"
+      },
+      {
+        "check": "every_headline_has_a_topic",
+        "passed": true,
+        "detail": "0 headlines without a topic"
+      }
+    ],
+    "failed": [],
+    "passed": true,
+    "min_rows_for_a_rate": 1000,
+    "min_obs_for_a_correlation": 100
+  },
+  "outcomes": {
+    "headline": "Three of seven questions produced no result, or a result that reads better than it is. Those are reported with the measurement that establishes them.",
+    "corpus": {
+      "headlines": 1113427,
+      "start": "2015-06-30",
+      "end": "2020-06-30"
+    },
+    "outcomes": [
+      {
+        "id": "volume",
+        "question": "Do national events show up as spikes in news volume?",
+        "kind": "null",
+        "headline": "No. Headline volume carries no news signal.",
+        "detail": "Within-year volume varies by at most 0.0352, and 0 months out of 6 clear a z-score of 2. March 2020, the month of the national lockdown, sits 2.5% above its own year mean.",
+        "evidence": "In 5 of 10 listed event months, all three desks predicted to rise \u2014 Health, Sports and Entertainment \u2014 fell instead.",
+        "caution": "This data cannot distinguish a genuinely quota-driven newsroom from a sampling artefact of the publisher's export. Both produce the same signature.",
+        "rq": "RQ2"
+      },
+      {
+        "id": "clusters",
+        "question": "Do the headlines cluster into topics on their own?",
+        "kind": "qualified",
+        "headline": "Partly. Structure exists, but it covers a small minority.",
+        "detail": "Silhouette 0.2582, which clears the conventional 0.25 threshold \u2014 but one cluster holds 94.88% of the corpus. The small clusters find money terms (`rs crore`, `lakh`), traffic and crime (`road`, `accident`, `killed`) and age copy (`old`, `year old`).",
+        "evidence": "None of those is a topic in the publisher's own taxonomy, so the clustering found writing patterns rather than desks. An earlier run measured 0.068 and was wrong: the feature pipeline was admitting numerals and stop words.",
+        "caution": "Silhouette rewards one large cluster sitting far from a few small tight ones, so the score and the shape must be read together.",
+        "rq": "RQ4"
+      },
+      {
+        "id": "market",
+        "question": "Do headlines relate to the market?",
+        "kind": "split",
+        "headline": "Not to daily returns. Yes, to volatility \u2014 and the direction is unexplained.",
+        "detail": "Against returns the strongest correlation is 0.0748, and the one significant lag out of the fifteen tested is what chance produces. Against 20-day volatility, log business-headline volume correlates at -0.28272 (p < 0.0001, 7.993% of variance): busier headline days go with calmer markets.",
+        "evidence": "Fifteen lag tests at alpha 0.05 produce about 0.75 false positives, so a single p below 0.05 is the expected outcome of running the tests, not a discovery.",
+        "caution": "Association only. Headline volume and volatility both respond to the same underlying events, and nothing here identifies a direction of effect.",
+        "rq": "RQ6"
+      },
+      {
+        "id": "language",
+        "question": "Which topics use the most sensational language?",
+        "kind": "positive",
+        "headline": "`Education` stands out, at 10.94% against a 3.77% corpus rate.",
+        "detail": "95% CI 10.06% to 11.89% over 4,450 headlines.",
+        "evidence": "`Unknown` tops the raw ranking at 17.29% and is excluded: it is a filing gap rather than a subject, so its score measures the absence of a filing decision.",
+        "caution": "A style measure on unlabelled headlines. It is a risk-signal rate and never a fake-news rate. The threshold is the measured 95th percentile, a chosen cut-off.",
+        "rq": "RQ3"
+      },
+      {
+        "id": "rules",
+        "question": "Which co-occurrence patterns exist?",
+        "kind": "positive",
+        "headline": "644 rules, found identically by two independent algorithms.",
+        "detail": "FP-Growth is 0.65x faster on identical input, and 313 of the rules are tautologies counted separately.",
+        "evidence": "Apriori and FP-Growth return the same rule set, which is asserted: they search the same itemsets, so a difference would mean one is broken. The keyword vocabulary produced zero rules and is reported as a finding about the feature.",
+        "caution": "Association, not causation. A rule states two attributes co-occur more often than chance.",
+        "rq": "RQ5"
+      },
+      {
+        "id": "classifier",
+        "question": "Can a classifier separate real statements from fake ones?",
+        "kind": "positive",
+        "headline": "95.71% against a 65.90% majority baseline.",
+        "detail": "+29.8 percentage points, with Fake recall 91.37%.",
+        "evidence": "The model was chosen on training cross-validated accuracy and the test split was scored once. Accuracy alone would flatter a model that learned nothing, because always answering 'real' already scores the baseline.",
+        "caution": "An upper bound. Part of IFND's Fake class is LSTM-generated augmentation, which is far easier to distinguish than a fake written by a person.",
+        "rq": "RQ7"
+      },
+      {
+        "id": "mix",
+        "question": "How did the topic mix change across the window?",
+        "kind": "qualified",
+        "headline": "`Local` is 69.95% of the window, and one filing artefact dominates the story.",
+        "detail": "`business.international-business` is 11.1% of all 2017 headlines and 0.2% of 2018. A naive topic-mix analysis would report that as a change in what India was reading.",
+        "evidence": "1 raw category holds an implausible share of a single year, which means the publisher changed how it filed content.",
+        "caution": "2015 is a partial year, so every trend statement is a within-year share and raw counts across years are never compared.",
+        "rq": "RQ1"
+      }
+    ],
+    "counts": {
+      "null": 1,
+      "qualified": 2,
+      "positive": 3,
+      "split": 1,
+      "total": 7
+    }
+  },
+  "honesty_rules": [
+    "On the unlabelled TOI corpus every style measure is a RISK-SIGNAL rate. It is never a fake-news rate.",
+    "Only the IFND classifier states an accuracy, because IFND is the only source with ground truth.",
+    "Correlations are associations. No result in this project identifies an effect of news on markets.",
+    "Association rules state co-occurrence, never causation.",
+    "2015 is a partial year and is excluded from year-on-year comparison.",
+    "A negative result is reported as a negative result, with the measurement that establishes it."
+  ]
+}

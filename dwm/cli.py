@@ -316,13 +316,19 @@ def serve(
         ),
     ] = False,
 ) -> None:
-    """Start the FastAPI backend.
+    """Start the backend, which also serves the dashboard.
 
     Takes a copy of the warehouse to serve from. DuckDB locks its file
     exclusively even for a read-only connection, so serving the live file
     would block every CLI command for as long as the server ran. Serving a
     byte-identical snapshot keeps the dashboard and the CLI usable at the same
     time, which is what a demonstration needs.
+
+    **This one process serves everything.** The dashboard is mounted as static
+    files on the same application and reads the same endpoints on the same
+    origin, so there is no second server to start and no CORS to configure. It
+    used to be a separate Streamlit process on :8501, which meant two
+    terminals to get wrong before a demonstration.
     """
     import uvicorn
 
@@ -335,7 +341,8 @@ def serve(
     except DataUnavailable as exc:
         raise typer.BadParameter(str(exc)) from exc
     typer.echo(f"serving warehouse snapshot: {snapshot}")
-    typer.echo("dashboard:  .\\.venv\\Scripts\\python.exe -m streamlit run dashboard\\app.py")
+    typer.echo(f"dashboard:  http://127.0.0.1:{port}/")
+    typer.echo(f"api docs:   http://127.0.0.1:{port}/docs")
     uvicorn.run("dwm.api.app:app", host=host, port=port, reload=reload)
 
 

@@ -138,68 +138,96 @@ convenience.
 
 ## The dashboard
 
-`streamlit run dashboard/app.py`. Five sections — Overview, Findings, Explore,
-How it works, Report — with seven finding pages, one per research question.
+`dwm serve` starts one process that serves the API **and** the dashboard, from
+one origin. Open `http://localhost:8000`.
 
-**It computes nothing** (BLUEPRINT section 1). It calls the API and renders what
-comes back. `dashboard/helpers.py` holds the design system and the formatting, so
-both can be tested without a browser.
+Five sections: Overview, Findings, Explore, How it works, Report. Findings is
+one page per research question.
+
+### Why it is not Streamlit
+
+Phase 8 specified Streamlit, on the reasoning that it keeps the project
+Python-only and needs no JavaScript build step. The second half did not survive
+contact with a user:
+
+- **Streamlit's CSS is not a supported extension point.** Restyling it means
+  guessing internal class names, and the guess is wrong on every upgrade.
+- **On a machine set to dark mode it painted dark widgets over the light canvas
+  the custom CSS had set** — black radio dots, black code blocks, a black chart
+  on white. That is unfixable from outside the framework, because a
+  CSS-injection layer cannot know what the framework will paint next.
+- **Every interaction re-ran the whole Python script**, which is a latency
+  problem against a 1.1M-row warehouse.
+
+Replaced with static HTML, CSS and vanilla JavaScript served by the same FastAPI
+process, with Vega-Lite from a CDN. **No bundler and no build step** — the
+property the original choice was protecting is intact. `python -m dwm serve`
+remains the single command that starts everything.
 
 ### The answer comes before the evidence
 
-Each finding page leads with the question, then **the answer as the largest text
-on the page**, then how we know, then the caveat. The previous layout showed
-panels of data and left the reader to infer the point, which inverts the
-emphasis for no good reason.
+Each finding page leads with the question, then **the answer at display size**,
+then how we know, then the caveat. The previous layout showed panels of data and
+left the reader to infer the point, which inverts the emphasis for no good
+reason.
 
 The conclusions live in `facts.json` under `outcomes`, **derived from the
 measured values** rather than hand-written, so they cannot drift away from the
-numbers the way prose does. Both `report.md` and the dashboard render the same
-block. A null result is kept rather than dropped: "we looked and there was
-nothing" is the answer to a question.
+numbers the way prose does. `report.md` and the dashboard render the same block.
+A null result is kept rather than dropped: "we looked and there was nothing" is
+the answer to a question.
 
 ### Cautions
 
-`render_metric` returns the value, unit and caution as three separate strings so
-a test can assert the caution is never dropped, and `find_uncautoned` walks the
-whole API payload at startup — if any figure has a unit and no caveat, the
-sidebar shows a warning. `metric()` renders a warning inline in that case.
+`figure()` in `app.js` refuses to render a figure that has a unit and no
+caution, and `auditPayload` walks the whole `/summary` payload at start-up — if
+it finds one, the guard badge in the top bar turns red. `find_uncautoned` in
+`dashboard/helpers.py` is the same walk in Python, so a test can assert it.
 
-That is not decoration. A bare "10.9%" on a screen, detached from the words
-"risk-signal rate on unlabelled headlines", is exactly how a risk-signal rate
-stops being called one.
+A bare "10.9%" detached from "risk-signal rate on unlabelled headlines" is
+exactly how a risk-signal rate stops being called one.
 
-### Infographics
+### Charts
 
-Six Altair charts, chosen because each one shows a finding rather than
-displaying a table: the event-month z-scores as diverging bars, the topic mix as
-a stacked area, silhouette against k with the chosen value ringed, the cluster
-sizes showing the 94.88% blob, the volatility scatter with its trend, and the
-confusion matrix as a heatmap. Hover tooltips throughout, and a CSV download
-returns exactly the data behind each chart.
+Ten Vega-Lite specs, built in Python by `dwm/ui/charts.py` and served by
+`GET /ui/charts?theme=light|dark`. The front end embeds them and does nothing
+else.
 
-Two-colour encodings are written as a **labelled nominal field** mapped through
-a scale, not as a conditional. Altair 6 changed the conditional API enough that
-`alt.condition(...)` is no longer safe to title, and an untitled two-colour
-legend is unreadable anyway — so the legend says `coverage fell` and
-`coverage rose`.
+Two decisions worth recording:
 
-### Testing the dashboard
+- **The specs are built in Python, not JavaScript.** Drawing a chart is not
+  computing, so this is not about the no-computation rule. It is that a
+  malformed spec is a blank page with no stack trace — built here it is a failing
+  unit test — and that six charts in one file share one palette instead of
+  drifting.
+- **The theme is a parameter.** A hard-coded light palette is what made the
+  previous version unreadable on a dark machine. Both are designed, and the
+  client asks for the one it is using.
 
-**A healthy server proves nothing.** Streamlit executes a page only when a
-session connects, so a dashboard whose every page raises still answers
-`/_stcore/health` with "ok". That is how the Report page survived: it called
-`.json()` on a markdown endpoint and had never once worked.
+### Verification, and why it exists
 
-So the tests use Streamlit's own `AppTest` to run the real script headlessly and
-visit every section, every finding page, and both tab groups — 21 tests. It
-caught a `KeyError` from misreading the API's shape, three Altair 6 API breaks,
-and a `str` versus `float` comparison caused by a colour label overwriting the
-column being plotted.
+The build had no connected browser. Every defect that follows from that is
+silent: the server returns 200, the page loads, no console error, the suite stays
+green. So `tests/test_ui.py` checks the things an eye checks automatically:
 
-One test recomputes the volatility correlation from the plotted points and
-asserts it matches the reported r, so the scatter and the number beside it can
-never describe different things.
+- every CSS variable is defined (an undefined `var(--x)` renders nothing)
+- every element id the JavaScript reaches for is declared
+- every chart the front end names is served, and vice versa
+- **every dotted path the front end reads exists** — asserted against the real
+  `facts.json`, not a fixture
+- every text pair meets WCAG AA, in both themes
+- the chart palette has not drifted from the CSS
+
+That found six real bugs in one pass. Four were wrong data keys
+(`taxonomy_artefacts.category` against `.raw_category`, `.significant` against
+`.significant_at_alpha`, `.max_abs_r` against the fact header, and a per-model
+`.baseline` that never existed) — each of which rendered a blank or an "n/a"
+rather than raising.
+
+One was not cosmetic: `build_outcomes` emitted its caveat under the key `caveat`
+while the rest of the project spelled it `caution`, so **every caution on the
+conclusions page silently rendered as absent** — on the one page whose job is
+stating what may not be claimed.
 
 ## End-to-end
 

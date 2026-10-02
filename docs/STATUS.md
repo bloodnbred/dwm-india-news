@@ -8,21 +8,21 @@ reasoning behind each stage.
 
 | Phase | Gate | Result |
 |---|---|---|
-| 0 Scaffold | pytest runs, `--help` works | pass, 289 tests |
+| 0 Scaffold | pytest runs, `--help` works | pass, 369 tests |
 | 1 Ingest | staging row counts equal source | pass, zero rejects |
 | 2 ETL + dims | no null date keys, every category maps | pass |
 | 3 Features + facts | fact counts equal clean counts, keys unique | pass |
 | 4 OLAP | roll-up totals equal raw totals, cube equals fact | verified against the warehouse |
 | 5-6 Mining | metrics on test split only; seeds reproduce | pass, all 7 questions answered |
 | 7 Inference | every fact has a source; every caution reaches the report | pass, 15 of 15 guards |
-| 8 API + dashboard | read-only; every page rendered headlessly | pass, 14 endpoints, 21 dashboard tests |
+| 8 API + dashboard | read-only; specs, contrast and wiring verified | pass, 16 endpoints, 5 sections, 101 UI tests |
 
 Everything reproduces from raw CSV to `report.md` in about six minutes:
 
 ```
 powershell -ExecutionPolicy Bypass -File .\run_all.ps1 -clean
 .\.venv\Scripts\python.exe -m dwm serve
-.\.venv\Scripts\python.exe -m streamlit run dashboard\app.py
+.\.venv\Scripts\python.exe -m dwm serve   # serves the dashboard too
 ```
 
 `-skipAnalysis` rebuilds only the warehouse.

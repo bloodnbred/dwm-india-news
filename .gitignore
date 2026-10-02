@@ -28,12 +28,26 @@ warehouse/*.wal
 warehouse/dwm.serve.duckdb
 
 # --- generated artefacts ---
-# All three are fully regenerable: `dwm mine` writes mining.json, `dwm report`
-# writes facts.json and report.md from it. They are ignored together so the
-# repository never carries a stale copy of a number the pipeline can rebuild,
-# and so a diff never mixes code changes with regenerated results.
-reports/*.json
-reports/*.md
+# `mining.json` is the large intermediate and is fully regenerable, so it is
+# ignored. `facts.json` and `report.md` are also regenerable, but they are the
+# *published results*, and they are committed so that anyone who opens the
+# repository sees what the study found without installing anything or waiting
+# six minutes for the pipeline. A results snapshot that can drift from the code
+# is the risk here; the snapshot is regenerated in the same commit as any change
+# that moves a number, and `dwm report` refuses to run with a failing gate.
+reports/mining.json
+reports/*.log
+
+# Everything else under reports/ is generated and not published.
+reports/*.tmp
+
+# --- screenshots and scratch ---
+# Win+Shift+S creates a *directory* of this name containing timestamped PNGs.
+_shot.png/
+_shot*.png
+_screens/
+*.local.md
+
 logs/
 *.log
 !pip-install.log

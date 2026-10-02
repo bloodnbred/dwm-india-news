@@ -348,6 +348,45 @@ def market_daily(topic: str | None = None) -> dict[str, Any]:
     }
 
 
+def build_manifest() -> dict[str, Any]:
+    """What the dashboard needs to render its shell: identity, provenance, gate.
+
+    Assembled here rather than in the endpoint because a client assembling its
+    own provenance is how a null ends up in a user-facing slot. That happened:
+    `/summary` returned `generated_at` and `mining_run_id` but not
+    `config_version`, and the dashboard rendered the literal string
+    "config vNone" in the sidebar for a whole build. A missing field is a bug
+    whether or not the number behind it is load-bearing, and putting the block
+    in one place makes the omission visible in review.
+    """
+    facts = load_facts()
+    guards = facts.get("guards") or {}
+    checks = guards.get("checks") or []
+    failed = guards.get("failed") or []
+    return {
+        "title": "Indian News Warehouse",
+        "subtitle": (
+            "What the headlines, the labelled statements and five years of "
+            "index data actually support"
+        ),
+        "provenance": {
+            "generated_at": facts.get("generated_at"),
+            "mining_run_id": facts.get("mining_run_id"),
+            "config_version": facts.get("config_version"),
+            "source": "reports/facts.json",
+        },
+        "guards": {
+            "passed": bool(guards.get("passed")),
+            "total": len(checks),
+            "succeeded": len(checks) - len(failed),
+            "failed": failed,
+        },
+        "corpus": (facts.get("corpus") or {}).get("analysis_window", {}),
+        "honesty_rules": facts.get("honesty_rules") or [],
+        "datasets": facts.get("datasets") or {},
+    }
+
+
 def table_counts() -> list[dict[str, Any]]:
     """Every table and its row count, for the warehouse browser."""
     con = connection()

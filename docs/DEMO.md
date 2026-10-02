@@ -3,20 +3,18 @@
 Ordered so the strongest thing is first and the build is last. Every command
 here has been run and every row count verified.
 
-**Before you start** — one terminal, the API and dashboard. They now run
-*alongside* the CLI, so you can keep both open and switch freely.
+**Before you start** — one terminal, one command. `dwm serve` starts the API
+*and* serves the dashboard from the same process on the same origin, so there is
+no second server to start and nothing to get wrong.
 
 ```powershell
 .\.venv\Scripts\python.exe -m dwm serve
 ```
 
-In a second terminal:
+Open **http://localhost:8000**. Leave it running for the whole demo.
 
-```powershell
-.\.venv\Scripts\python.exe -m streamlit run dashboard\app.py
-```
-
-Open **http://localhost:8501**. Leave both running for the whole demo.
+The CLI stays usable at the same time, so you can keep this terminal and a second
+one open and switch freely.
 
 Total: about 25 minutes. Timings in brackets.
 
@@ -40,7 +38,7 @@ Point at the section list. Ten sections, 34 KB, generated.
 
 ## 2. The data (2 min)
 
-**In the dashboard:** Overview panel. Show the four metric cards.
+**In the dashboard:** Overview. Show the four KPI cards.
 
 Say the number out loud: **1,113,427 headlines in the analysis window**,
 2015-06-30 to 2020-06-30.
@@ -119,7 +117,7 @@ Add `-p topic=Sports` or `--limit 20` to any of them to show parameters work.
 
 ## 5. The seven questions (8 min)
 
-**In the dashboard,** one panel each. `Language`, `Rules`, `Market` and
+**In the dashboard,** one finding page each. Language, Co-occurrence rules,
 `Classifier` are the four worth pausing on.
 
 ### RQ2 — the flatness (2 min) — *your strongest moment*
@@ -265,7 +263,7 @@ inference gate: 15 of 15 checks passed
 
 ## 8. The dashboard: answer first, and the honesty mechanism (2 min)
 
-Back to **:8501**. Start on **Overview** and scroll.
+Back to **:8000**. Start on **Overview** and scroll.
 
 > "Every page leads with its answer, not its data. Each outcome carries the
 > question, the answer as the largest text on the page, how we know, and the
@@ -306,11 +304,11 @@ dashboard computes nothing, so it cannot disagree with the report.
 ## 9. Reproducibility (2 min)
 
 ```powershell
-.\.venv\Scripts\python.exe -m pytest -q      # 268 tests
+.\.venv\Scripts\python.exe -m pytest -q      # 369 tests
 .\.venv\Scripts\ruff.exe check .             # clean
 ```
 
-> "268 tests, no network, and they never touch the real warehouse or the
+> "369 tests, no network, and they never touch the real warehouse or the
 > reports directory. They check the promises rather than the numbers: that a
 > rate is never reported without its denominator, that a statistic from too
 > few observations is refused with a stated reason, that the payload carries
@@ -353,9 +351,9 @@ If something breaks mid-demo:
 
 | Problem | Do this |
 |---|---|
-| Dashboard won't load | It's still running — `reports/report.md` covers every finding. |
-| Port 8501 busy | `streamlit run dashboard\app.py --server.port 8601` |
-| API won't start | `dwm serve --port 9000`, then `$env:DWM_API="http://127.0.0.1:9000"` before Streamlit |
+| Port 8000 busy | `dwm serve --port 9000`, then browse to `http://localhost:9000/` |
+| A chart shows an error box | The chart library did not load — it comes from a CDN, so this needs internet. Every number is on the page as text. |
+| Dashboard won't load | `reports/report.md` covers every finding, and `Get-Content reports\facts.json` has every number with its source. |
 | `dwm olap` says file in use | Something is holding the warehouse. `Get-Process python \| Stop-Process -Force`, then `dwm serve` again. |
 | Warehouse gone | `powershell -ExecutionPolicy Bypass -File .\run_all.ps1 -clean` then `dwm mine` then `dwm report` — 6 minutes. |
 | You need a number | `Select-String` it in `reports/facts.json`. Every figure is there with its source. |
