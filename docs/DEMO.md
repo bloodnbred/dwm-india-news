@@ -18,6 +18,31 @@ one open and switch freely.
 
 Total: about 25 minutes. Timings in brackets.
 
+### If PowerShell is not cooperating
+
+Two `.cmd` files sit at the repo root for machines where the above does not run
+as written. Neither needs PowerShell's execution policy to allow anything.
+
+**`open-dashboard.cmd`** — double-click it. It starts the dashboard, waits for
+`/health` to answer before opening the browser (so you never get a blank page),
+and then opens it for you. Running it while a server is already up just opens
+the browser and starts nothing, so double-clicking twice is harmless.
+
+**The window stays open on purpose.** It owns the server process; closing it is
+how you stop the server. If the server fails to start, the same window keeps the
+Python traceback on screen and waits for a key — read it there.
+
+**`run_all.cmd`** — wraps the PowerShell pipeline for the rebuild, for teammates
+whose machine blocks unsigned `.ps1` files. Flags pass straight through, so
+`run_all.cmd -clean` and `run_all.cmd -skipAnalysis` both work as they do in
+`run_all.ps1`. The window pauses at the end so a failing stage stays readable,
+and the exit code is the script's own, because `run_all.ps1` deliberately exits
+non-zero when a stage fails.
+
+If `open-dashboard.cmd` warns that the server has no results loaded, that is the
+snapshot behind the server being empty rather than a launcher fault — run
+`run_all.cmd` once first.
+
 ---
 
 ## 1. The claim, before any tooling (30s)
@@ -351,11 +376,12 @@ If something breaks mid-demo:
 
 | Problem | Do this |
 |---|---|
-| Port 8000 busy | `dwm serve --port 9000`, then browse to `http://localhost:9000/` |
+| Port 8000 busy | `dwm serve --port 9000`, then browse to `http://localhost:9000/`. Or close the `open-dashboard.cmd` window — that is what stops its server. |
 | A chart shows an error box | The chart library did not load — it comes from a CDN, so this needs internet. Every number is on the page as text. |
 | Dashboard won't load | `reports/report.md` covers every finding, and `Get-Content reports\facts.json` has every number with its source. |
 | `dwm olap` says file in use | Something is holding the warehouse. `Get-Process python \| Stop-Process -Force`, then `dwm serve` again. |
-| Warehouse gone | `powershell -ExecutionPolicy Bypass -File .\run_all.ps1 -clean` then `dwm mine` then `dwm report` — 6 minutes. |
+| Warehouse gone | `run_all.cmd -clean` from the repo root — or `powershell -ExecutionPolicy Bypass -File .\run_all.ps1 -clean`. Then `dwm mine` then `dwm report` — 6 minutes. |
+| `.ps1` blocked as "cannot be loaded" | PowerShell's execution policy, not the project. Use `run_all.cmd`, which bypasses it for that one process without changing anything permanent. |
 | You need a number | `Select-String` it in `reports/facts.json`. Every figure is there with its source. |
 
 ## Do not do these
