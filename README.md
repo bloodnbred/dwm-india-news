@@ -120,6 +120,18 @@ Two terminals:
 The dashboard needs the API running. Point it elsewhere with
 `$env:DWM_API = "http://127.0.0.1:9000"`.
 
+**You can run CLI commands while both are up.** DuckDB locks its file
+exclusively even for a read-only connection, so `dwm serve` copies the
+warehouse to `warehouse/dwm.serve.duckdb` and serves that copy. The copy is
+byte-exact and takes 0.2 seconds. Refresh it with `dwm serve --resnapshot` or
+`POST /query/reload`.
+
+### Demonstrating it
+
+[`docs/DEMO.md`](docs/DEMO.md) is an ordered runbook: what to show, what to
+say, how long each part takes, and what to do when something breaks. Start
+there.
+
 Global options accepted by the pipeline commands: `--db`, `--sample`, `--years`,
 `--chunk`, `--dataset/-d`, `--force`, `--skip-fetch`, `--verbose`.
 
@@ -236,6 +248,7 @@ docs/
   04-mining.md             the seven questions and the three negative results
   05-inference-api.md      traceability, guard rails, API and dashboard
   VIVA.md                  every claim, its command, and the follow-up question
+  DEMO.md                  ordered runbook, with timings and fallbacks
   STATUS.md                handover notes and current state
 reports/              mining.json, facts.json, report.md
 data/raw/             raw CSVs, gitignored

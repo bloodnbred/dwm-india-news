@@ -143,6 +143,12 @@ Fake class is LSTM-augmented.
 - **Resolve the reports path by calling `reports_dir()`, not at import time.**
   A module-level constant froze it, and redirection then depended on import
   order.
+- **DuckDB locks its file exclusively, even read-only.** The API therefore
+  serves a copy at `warehouse/dwm.serve.duckdb`, so `dwm serve` and the CLI can
+  run at the same time. Serving the live file made `dwm olap`, `dwm tables` and
+  `dwm audit` all fail with "the process cannot access the file because it is
+  being used by another process". Refresh the copy with `dwm serve
+  --resnapshot` or `POST /query/reload`.
 
 ## Files worth reading in this order
 
