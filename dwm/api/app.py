@@ -93,7 +93,9 @@ def health() -> dict[str, Any]:
     it, which is exactly when a client most needs to be told something is
     wrong.
     """
-    state: dict[str, Any] = {"status": "ok", "facts": False, "warehouse": False}
+    state: dict[str, Any] = {
+        "status": "ok", "facts": False, "warehouse": False, "snapshot": None,
+    }
     try:
         store.load_facts()
         state["facts"] = True
@@ -103,6 +105,7 @@ def health() -> dict[str, Any]:
     try:
         store.table_counts()
         state["warehouse"] = True
+        state["snapshot"] = str(store.snapshot_path())
     except DataUnavailable as exc:
         state["status"] = "degraded"
         state.setdefault("detail", str(exc))
@@ -235,13 +238,17 @@ def audit(limit: int = Query(default=25, ge=1, le=200)) -> dict[str, Any]:
 
 @app.post("/query/reload", tags=["query"])
 def reload_caches() -> dict[str, Any]:
-    """Drop cached results so a rebuilt warehouse is picked up.
+    """Re-snapshot the warehouse and drop cached results.
 
-    A POST because it mutates process state, not the data. It cannot write to
-    the warehouse; it only forgets what it had read.
+    A POST because it mutates process state and touches the filesystem. It
+    cannot write to the warehouse; it copies it and forgets what it had read.
     """
     store.reload()
-    return {"reloaded": True, "detail": "cached facts and connection dropped"}
+    return {
+        "reloaded": True,
+        "snapshot": str(store.snapshot_path()),
+        "detail": "warehouse re-snapshotted, cached facts and report dropped",
+    }
 
 
 @app.get("/query/{operation}", tags=["query"])

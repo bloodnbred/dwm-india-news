@@ -308,13 +308,34 @@ def serve(
     host: Annotated[str, typer.Option("--host")] = "127.0.0.1",
     port: Annotated[int, typer.Option("--port")] = 8000,
     reload: Annotated[bool, typer.Option("--reload")] = False,
+    resnapshot: Annotated[
+        bool,
+        typer.Option(
+            "--resnapshot/--no-resnapshot",
+            help="Re-copy the warehouse even when the snapshot is already current.",
+        ),
+    ] = False,
 ) -> None:
-    """Start the FastAPI backend."""
+    """Start the FastAPI backend.
+
+    Takes a copy of the warehouse to serve from. DuckDB locks its file
+    exclusively even for a read-only connection, so serving the live file
+    would block every CLI command for as long as the server ran. Serving a
+    byte-identical snapshot keeps the dashboard and the CLI usable at the same
+    time, which is what a demonstration needs.
+    """
     import uvicorn
 
+    from dwm.api.store import DataUnavailable, ensure_snapshot
     from dwm.config import ensure_dirs as _ensure
 
     _ensure()
+    try:
+        snapshot = ensure_snapshot(force=resnapshot)
+    except DataUnavailable as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    typer.echo(f"serving warehouse snapshot: {snapshot}")
+    typer.echo("dashboard:  .\\.venv\\Scripts\\python.exe -m streamlit run dashboard\\app.py")
     uvicorn.run("dwm.api.app:app", host=host, port=port, reload=reload)
 
 

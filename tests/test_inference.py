@@ -534,4 +534,100 @@ def test_missing_results_are_503_not_500(client, monkeypatch) -> None:
     store.reload()
 
 
+# ---------------------------------------------------------------------------
+# the snapshot that lets the API and the CLI run at the same time
+# ---------------------------------------------------------------------------
+
+
+def test_api_serves_a_copy_not_the_live_warehouse(settings, monkeypatch) -> None:
+    """DuckDB locks its file exclusively, even read-only.
+
+    Serving the live file meant that with the API up, `dwm olap`, `dwm tables`
+    and `dwm audit` all failed with "the process cannot access the file because
+    it is being used by another process". For a demonstration that is fatal:
+    you cannot show a CLI command without stopping the dashboard.
+
+    So the API copies the warehouse and serves the copy. This asserts the copy
+    exists, is distinct from the original, and holds the same data.
+    """
+    import dwm.api.store as store
+    from dwm.db import connect
+
+    # Point the snapshot machinery at the fixture, never the real 424 MB
+    # warehouse: the running server holds a lock on that one.
+    monkeypatch.setattr(store, "default_db_path", lambda: settings.db_path)
+
+    build = connect(settings)
+    try:
+        build.execute("CREATE TABLE IF NOT EXISTS snap_probe AS SELECT 1 AS n")
+        build.execute("INSERT INTO snap_probe VALUES (2)")
+    finally:
+        build.close()
+
+    store.reload()
+    snapshot = store.ensure_snapshot(force=True)
+    try:
+        assert snapshot.exists()
+        assert snapshot != settings.db_path
+        assert snapshot.name == "dwm.serve.duckdb"
+        probe = connect(Settings(db_path=snapshot, read_only=True))
+        try:
+            total = probe.execute("SELECT sum(n) FROM snap_probe").fetchone()[0]
+        finally:
+            probe.close()
+        assert total == 3, "the snapshot must hold the same rows as the original"
+    finally:
+        if snapshot.exists():
+            snapshot.unlink()
+        store.reload()
+
+
+def test_snapshot_is_not_rebuilt_when_it_is_current(settings, monkeypatch) -> None:
+    """Re-copying 424 MB on every start would be silly; staleness must be caught."""
+    import time
+
+    import dwm.api.store as store
+    from dwm.db import connect
+
+    monkeypatch.setattr(store, "default_db_path", lambda: settings.db_path)
+
+    build = connect(settings)
+    try:
+        build.execute("CREATE TABLE IF NOT EXISTS snap_probe AS SELECT 1 AS n")
+    finally:
+        build.close()
+
+    store.reload()
+    try:
+        first = store.ensure_snapshot(force=True)
+        stamp = first.stat().st_mtime
+        time.sleep(0.05)
+        second = store.ensure_snapshot(force=False)
+        assert second == first
+        assert second.stat().st_mtime == stamp, "a current snapshot must not be re-copied"
+
+        # Write to the source so it is newer than the snapshot. The timestamp
+        # is set explicitly because a filesystem with coarse mtime granularity
+        # would otherwise leave the two equal.
+        later = stamp + 10
+        import os
+
+        os.utime(settings.db_path, (later, later))
+
+        third = store.ensure_snapshot(force=False)
+        assert third.stat().st_mtime > stamp, "a stale snapshot must be refreshed"
+    finally:
+        if store.snapshot_path().exists():
+            store.snapshot_path().unlink()
+        store.reload()
+
+
+def test_snapshot_refuses_without_a_warehouse(tmp_path: Path, monkeypatch) -> None:
+    from dwm.api.store import DataUnavailable, ensure_snapshot
+
+    monkeypatch.setattr("dwm.api.store.default_db_path", lambda: tmp_path / "nope.duckdb")
+    with pytest.raises(DataUnavailable, match="run_all"):
+        ensure_snapshot(force=True)
+
+
 

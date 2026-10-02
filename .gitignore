@@ -23,6 +23,9 @@ data/raw/*
 warehouse/*.duckdb
 warehouse/*.duckdb.wal
 warehouse/*.wal
+# The copy `dwm serve` reads from, so the API can hold a lock without blocking
+# the CLI. Rebuilt on demand; never worth committing 424 MB of.
+warehouse/dwm.serve.duckdb
 
 # --- generated artefacts ---
 # All three are fully regenerable: `dwm mine` writes mining.json, `dwm report`

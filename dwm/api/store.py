@@ -17,16 +17,20 @@ warehouse even if validation were bypassed.
 
 from __future__ import annotations
 
+import contextlib
 import json
+import shutil
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
-from dwm.config import PROJECT_ROOT, default_db_path, reports_dir
+from dwm.config import default_db_path, reports_dir
 from dwm.db import connect
 from dwm.logging_utils import get
 
 log = get("dwm.api.store")
+
+SNAPSHOT_NAME = "dwm.serve.duckdb"
 
 
 # Resolved when used, not at import. A module-level constant froze the reports
@@ -52,25 +56,81 @@ class DataUnavailable(RuntimeError):
 def _read_only_settings():
     from dwm.config import Settings
 
-    return Settings(
-        db_path=PROJECT_ROOT / "warehouse" / default_db_path().name, read_only=True
-    )
+    return Settings(db_path=snapshot_path(), read_only=True)
+
+
+def snapshot_path() -> Path:
+    """Where the served copy of the warehouse lives."""
+    return default_db_path().parent / SNAPSHOT_NAME
+
+
+def ensure_snapshot(force: bool = False) -> Path:
+    """Copy the warehouse to a snapshot the API can hold open.
+
+    **DuckDB takes an exclusive lock on the file even for a read-only
+    connection.** One process holding the warehouse therefore blocks every
+    other process, and the consequence for a demonstration is bad: with the API
+    running, `dwm olap`, `dwm tables` and `dwm audit` all fail with "the
+    process cannot access the file because it is being used by another
+    process". You would have to stop the dashboard to show a CLI command and
+    stop the CLI to show the dashboard.
+
+    Serving a copy removes the conflict entirely, and it is the right shape
+    anyway: a read-only API answering from a point-in-time snapshot cannot be
+    half-way through a rebuild, and the numbers it returns belong to a specific
+    run rather than to whatever the file holds at the moment of the request.
+
+    The copy is byte-exact, so every count and every OLAP result is identical
+    to querying the live warehouse. It costs about 0.2 seconds and 424 MB, and
+    is refreshed by restarting `dwm serve` or by POSTing `/query/reload`.
+    """
+    source = default_db_path()
+    if not source.exists():
+        raise DataUnavailable(
+            f"no warehouse at {source}. Run "
+            "`powershell -ExecutionPolicy Bypass -File .\\run_all.ps1` first."
+        )
+    target = snapshot_path()
+    if target.exists() and not force and target.stat().st_mtime >= source.stat().st_mtime:
+        return target
+
+    target.parent.mkdir(parents=True, exist_ok=True)
+    # A stale -wal alongside a cleanly-closed database would make the copy
+    # incomplete, so it is removed rather than trusted.
+    wal = source.with_suffix(source.suffix + ".wal")
+    if wal.exists():
+        wal.unlink()
+
+    try:
+        shutil.copyfile(source, target)
+    except PermissionError as exc:
+        # On Windows DuckDB holds its file with a share mode that denies
+        # reading, so the source cannot be copied while a build or another
+        # process has it open. Keeping the existing snapshot is the right
+        # answer: serving slightly older numbers beats serving nothing, and the
+        # next refresh picks up the rebuild.
+        if target.exists():
+            log.warning(
+                "warehouse is locked, keeping the existing snapshot (%s); "
+                "restart `dwm serve` to pick up a rebuild",
+                target,
+            )
+            return target
+        raise DataUnavailable(
+            f"cannot copy {source} to a serving snapshot: the file is in use. "
+            "Close any running build or another `dwm serve`, then start again."
+        ) from exc
+
+    stale_wal = target.with_suffix(target.suffix + ".wal")
+    if stale_wal.exists():
+        stale_wal.unlink()
+    log.info("warehouse snapshot: %s (%.0f MB)", target, target.stat().st_size / 1_048_576)
+    return target
 
 
 @lru_cache(maxsize=1)
 def _open_connection():
-    """One long-lived read-only handle on the warehouse.
-
-    Cached because a serving process should not reopen the file per request,
-    and read-only because the guarantee that no request can write to the
-    warehouse should come from the handle rather than from validation.
-    """
-    path = default_db_path()
-    if not path.exists():
-        raise DataUnavailable(
-            f"no warehouse at {path}. Run "
-            "`powershell -ExecutionPolicy Bypass -File .\\run_all.ps1` first."
-        )
+    """One long-lived read-only handle on the warehouse snapshot."""
     return connect(_read_only_settings())
 
 
@@ -104,10 +164,18 @@ load_report_markdown = lru_cache(maxsize=1)(_load_report_markdown)
 
 
 def reload() -> None:
-    """Drop the caches, so a rebuilt warehouse is picked up without a restart."""
+    """Drop the caches and re-snapshot, so a rebuilt warehouse is picked up.
+
+    The snapshot is refreshed as well as the caches, because a warehouse that
+    was rebuilt while the API was running is newer than the copy being served.
+    """
     _open_connection.cache_clear()
     load_facts.cache_clear()
     load_report_markdown.cache_clear()
+    # A missing warehouse is not this function's problem to report: the next
+    # request raises DataUnavailable with the command to run.
+    with contextlib.suppress(DataUnavailable):
+        ensure_snapshot(force=True)
 
 
 # ---------------------------------------------------------------------------
