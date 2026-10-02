@@ -1,6 +1,6 @@
 # Where the project stands
 
-Written at the end of 2026-10-02, after Phase 4. Read this first in a new
+Written at the end of 2026-10-02, after Phase 6. Read this first in a new
 session, then `README.md` for how to run things and `docs/` for the design
 reasoning behind each stage.
 
@@ -8,14 +8,33 @@ reasoning behind each stage.
 
 | Phase | Gate | Result |
 |---|---|---|
-| 0 Scaffold | pytest runs, `--help` works | pass, 157 tests |
+| 0 Scaffold | pytest runs, `--help` works | pass, 206 tests |
 | 1 Ingest | staging row counts equal source | pass, zero rejects |
 | 2 ETL + dims | no null date keys, every category maps | pass |
 | 3 Features + facts | fact counts equal clean counts, keys unique | pass |
 | 4 OLAP | roll-up totals equal raw totals, cube equals fact | verified against the warehouse |
+| 5-6 Mining | slope matches a manual check; metrics on test split only; seeds reproduce | pass, all 7 questions answered |
 
 The warehouse is at `warehouse/dwm.duckdb` and is fully built. `run_all.ps1`
-reproduces it from scratch in about 3.3 minutes.
+reproduces the data pipeline from scratch in about 4.7 minutes, and
+`python -m dwm mine` then answers the research questions in 86 seconds,
+writing `reports/mining.json`.
+
+## The two findings that matter most
+
+Both are negative, and both are the honest answer rather than a gap.
+
+**There is no news signal in the headline volume.** Within-year volume
+coefficient of variation is 0.02 to 0.04, and the busiest month of a year runs
+only 2-5% above its own mean. March 2020, the month of the national lockdown,
+is 2.5% above its year mean. Worse, in the pandemic months Health and Sports
+coverage *fall* below their norms and negative sentiment reaches its lowest
+point in the series. The archive behaves like a fixed editorial capacity, not a
+reactive news feed.
+
+**These headlines have almost no cluster structure.** Silhouette is 0.069, and
+silhouette rises to the largest k tried without turning over, which indicates
+no preferred cluster count rather than that k=12 is right.
 
 ## Current row counts
 
@@ -33,10 +52,42 @@ bridge_headline_keyword 4,221,537   cube_day_topic       19,481
 Analysis window: **2015-06-30 to 2020-06-30**, derived from the data, never
 hard-coded. 1,113,427 headlines fall inside it.
 
-## Next: Phase 5-6, mining
+## Next: Phase 7, inference
 
-The three modules in `dwm/mining/` are still stubs that raise
-`NotImplementedError`. Everything they need already exists:
+`dwm/inference/` is still a stub. `python -m dwm mine` now writes
+`reports/mining.json` (about 9.6 MB) containing every result the report needs,
+so the inference stage is a rendering job over that file rather than a
+recomputation. The blueprint requires deterministic templates filled from
+results, no LLM, so every number traces to a query.
+
+`dwm/api/` and the Streamlit dashboard are the remaining pieces after that.
+
+## What mining already answers
+
+| Q | Question | Result |
+|---|---|---|
+| 1 | topic mix over the window | `Local` 70%; one 2017 filing artefact flagged |
+| 2 | which months spike | none; volume is flat, CV ≤ 0.035 |
+| 3 | which categories are sensational | Education 10.9%, CI 10.1-11.9%, n=4,450 |
+| 4 | natural topic clusters | silhouette 0.069, no preferred k |
+| 5 | co-occurrence rules | 1,797, both algorithms agree, FP-Growth 1.3x |
+| 6 | headlines vs Nifty | no meaningful association, abs r ≤ 0.075 |
+| 7 | Real vs Fake classifier | 95.7% vs 65.9% baseline, fake recall 91.4% |
+
+Full reasoning in `docs/04-mining.md`.
+
+## How mining used the warehouse
+
+Everything the mining modules need already existed:
+
+- `fact_headline` carried `date_key`, `topic_key`, `sentiment_*`,
+  `sensational_score`, `is_risk_signal`, `in_window`
+- `bridge_headline_keyword` plus `dim_keyword` gave the vocabulary, though
+  measurement showed keyword transactions hold only 1.02 items each, so
+  association rules were mined from **attributes** instead
+- `fact_statement` carried `label_key` and the IFND text for the classifier
+- `fact_market_daily` carried `return_pct` and `volatility_20d`
+- `cube_day_topic` supplied the daily aggregate the market join needed
 
 - `fact_headline` carries `date_key`, `topic_key`, `sentiment_*`,
   `sensational_score`, `is_risk_signal`, `in_window`
@@ -49,16 +100,6 @@ The three modules in `dwm/mining/` are still stubs that raise
 
 The seven research questions map onto the work as follows, and the Phase 4
 operations that feed each one are already working:
-
-| Q | Question | Already available |
-|---|---|---|
-| 1 | topic mix over the window | `dwm olap --op topic_mix` |
-| 2 | which months spike | `dwm olap --op top_months` |
-| 3 | which categories are sensational | `dwm olap --op roll_up` |
-| 4 | natural topic clusters | needs TF-IDF + K-Means on `fact_headline` |
-| 5 | co-occurrence rules | needs Apriori and FP-Growth on the bridge |
-| 6 | headlines vs Nifty | `dwm olap --op drill_across` |
-| 7 | classifier vs majority baseline | needs the IFND text and `label_key` |
 
 ## Decisions already made that mining must respect
 
@@ -102,10 +143,18 @@ operations that feed each one are already working:
 - **Never hard-code a dimension key in SQL.** `dim_dataset` numbers rows by
   sorted code, so `toi` is key 3, not 1. Look it up. This was a real bug.
 - **Guard rails for small data.** The blueprint requires the Phase 7 gate to
-  fire on small data. Mining needs the same care: with a `--sample` run there
-  may be no trading days, no labelled rows, or too few headlines for K-Means.
-  Guard every statistic and return a stated reason rather than dividing by
-  zero.
+  fire on small data. Mining returns a stated reason rather than dividing by
+  zero: correlations need at least 3 points, RQ6 needs 100 paired trading
+  days, the classifier needs 2 members per class, and cross-validation folds
+  are capped by the smallest class so a `--sample` run does not crash.
+- **`unnest(?)` does not work in DuckDB 1.5.6.** A bound list parameter
+  cannot be cast to `INTEGER[]` for `unnest`. Do the small aggregation in
+  Python instead.
+- **`USING SAMPLE n ROWS (bernoulli, seed)` is rejected.** A discrete row count
+  needs `USING SAMPLE reservoir(n ROWS) REPEATABLE (seed)`.
+- **A partial year poisons whole-year statistics.** 2015 holds seven months
+  and its higher spread made a flat series look like CV 0.39. Exclude years
+  below `full_year_months` from any such claim and name them.
 
 ## Where the interesting reasoning lives
 
@@ -114,8 +163,11 @@ operations that feed each one are already working:
 | `docs/01-ingest-etl.md` | the four data traps, the measured data profile |
 | `docs/02-warehouse-schema.md` | dimensions, clean tables, the Phase 2 gate |
 | `docs/03-features-facts.md` | every measure's definition and why, the Phase 3 gate |
+| `docs/04-mining.md` | the seven questions, and the two negative findings |
 | `BLUEPRINT.md` | the original design, unchanged |
 | `config/features.yaml` | weights, thresholds, and the threshold calibration data |
+| `config/mining.yaml` | every mining threshold, seed and sample size |
+| `reports/mining.json` | the machine-readable results the report will quote |
 
 The viva sheet in `BLUEPRINT.md` section 6 is the thing to be able to talk
 through without notes. Every answer in it is backed by something in `docs/`.

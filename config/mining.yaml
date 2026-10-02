@@ -1,0 +1,152 @@
+# Mining parameters (Phases 5-6).
+#
+# Every threshold, seed and sample size lives here so the report can state
+# what produced a number and a re-run can reproduce it exactly.
+
+version: 1
+
+# --- RQ1 topic mix trend ---------------------------------------------------
+trends:
+  # 2015 is a PARTIAL year: the analysis window starts 2015-06-30, so it
+  # holds about half a year of headlines against a full year for the others.
+  # Raw counts per year are therefore not comparable, and neither are raw
+  # shares, because a half year inflates every topic's share equally.
+  # Everything is reported as a share of its own year, and the partial year
+  # is flagged rather than silently dropped.
+  partial_years: [2015]
+  # A year needs this many months before it counts toward the volume-flatness
+  # claim. 2015 holds seven months, and a seven-month series has a wider
+  # spread for reasons unrelated to news: including it reported a coefficient
+  # of variation of 0.39 for a series that is flat to within 0.02 to 0.04.
+  full_year_months: 12
+  # Minimum headlines in a year before its trend is trusted.
+  min_year_rows: 50000
+
+# --- RQ2 burst detection ---------------------------------------------------
+bursts:
+  # A month is a burst when its volume exceeds the mean of its own year by
+  # this many standard deviations, measured on the monthly series within the
+  # year. Comparing to the year rather than the whole window stops the 2016
+  # volume level from making every later year look quiet.
+  z_threshold: 2.0
+  # Also require a minimum absolute volume, so a quiet year cannot produce a
+  # "burst" out of statistical noise on a handful of headlines.
+  min_month_rows: 5000
+  # Events the report compares the detected bursts against. These are
+  # recorded as candidate explanations, not as causal claims.
+  known_events:
+    - { date: "2016-11", label: "Demonetisation announced 8 Nov 2016" }
+    - { date: "2016-12", label: "Demonetisation midnight deadline 31 Dec 2016" }
+    - { date: "2017-07", label: "GST launched 1 Jul 2017" }
+    - { date: "2017-08", label: "Independence Day, 15 Aug 2017" }
+    - { date: "2018-01", label: "Union Budget, 1 Feb 2018 (session starts)" }
+    - { date: "2019-02", label: "Union Budget, 1 Feb 2019" }
+    - { date: "2019-05", label: "General election result, 23 May 2019" }
+    - { date: "2020-03", label: "National COVID-19 lockdown announced 24 Mar 2020" }
+
+# --- RQ3 sensationalism by category ---------------------------------------
+sensationalism:
+  # The chosen cut-off is 0.2208, the measured 95th percentile. Because it is
+  # a judgement, the report shows the rate across a range of thresholds.
+  threshold: 0.2208
+  sensitivity_thresholds: [0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.40]
+  # Topics with fewer headlines than this get no rate: the percentage would
+  # be noise, and a rate without a denominator is exactly what the blueprint
+  # warns against.
+  min_topic_rows: 1000
+
+# --- RQ4 clustering --------------------------------------------------------
+clustering:
+  # KMeans on 1.1M headlines is not practical and would answer nothing a
+  # sample cannot. The sample is drawn at random with a fixed seed, so it is
+  # reproducible.
+  sample_size: 60000
+  # Candidate k. Silhouette picks the winner; ties break to the smaller k,
+  # which is the more parsimonious reading.
+  k_min: 4
+  k_max: 12
+  # TF-IDF on short headlines: unigrams and bigrams, sublinear term frequency
+  # so one word repeated three times does not dominate.
+  ngram_range: [1, 2]
+  min_df: 5
+  max_features: 20000
+  sublinear_tf: true
+  # Truncated-SVD (LSA) reduction before K-Means. This is not optional:
+  # measured on the raw 20,000-feature matrix, silhouette was 0.005 at every
+  # k from 4 to 12, i.e. no separation at all. In that many dimensions every
+  # document is nearly equidistant from every other. Reducing to ~100 dense
+  # components is the standard remedy for short text and is what makes the
+  # silhouette a usable diagnostic.
+  svd_components: 100
+  # Terms listed per cluster in the description.
+  top_terms: 12
+  # Fixed so clustering reproduces exactly.
+  seed: 20251002
+
+# --- RQ5 association rules -------------------------------------------------
+rules:
+  # Transactions are ATTRIBUTES, not keywords. Measured on the real data, the
+  # 300-term keyword vocabulary yields only 1.86 items per headline, because
+  # its top terms are functional words (govt, held, get, man, police). Rules
+  # over such sparse transactions are not worth reporting.
+  #
+  # The blueprint's own example is attribute-shaped:
+  #     topic=Business, year=2016 => sensational=high
+  # so attributes are the primary source. Keyword transactions are still
+  # run as a secondary result and reported with their sparsity stated.
+  transaction_items:
+    - topic
+    - year
+    - quarter
+    - sentiment_band
+    - sensational_flag
+    - weekday_flag
+    - multi_category_flag
+  min_support: 0.01
+  min_confidence: 0.30
+  max_len: 3
+  # Apriori on attribute transactions is cheap, but the real corpus has
+  # 1,113,427 in-window headlines. Sampling keeps the search honest and
+  # comparable between Apriori and FP-Growth, which is the point of running
+  # both: the rules must be identical so the timing difference is meaningful.
+  sample_transactions: 200000
+  # Secondary keyword-based run, reported with its sparsity caveat.
+  keyword_rules:
+    enabled: true
+    min_support: 0.02
+    min_confidence: 0.30
+    sample_transactions: 100000
+  seed: 20251002
+
+# --- RQ6 headline-market association --------------------------------------
+market:
+  # Correlation is computed over TRADING DAYS only, because there is no close
+  # price on a weekend or a holiday. Headlines are published on 1,828 days in
+  # the window and the market trades on 1,235.
+  topic: Business
+  # Lag in trading days: 0 means same day, 1 means the previous trading day.
+  # Reported as association, never as an effect of news on the market.
+  lags: [0, 1, 2, 3, 5]
+  # Below this many paired observations a correlation is not reported.
+  min_observations: 100
+  # A p-value is reported alongside the coefficient so a coefficient near
+  # zero is not mistaken for a weak effect.
+  alpha: 0.05
+
+# --- RQ7 classifier --------------------------------------------------------
+classifier:
+  # The IFND majority class is 65.9%, so "always predict real" already scores
+  # 0.659. Accuracy alone is therefore meaningless here and every metric is
+  # reported against that baseline.
+  test_size: 0.30
+  # Stratified on the label so both classes keep their proportion.
+  stratify: true
+  max_features: 30000
+  ngram_range: [1, 2]
+  min_df: 2
+  # Fixed seed: the Phase 6 gate requires reproducible metrics.
+  seed: 20251002
+  # Cross-validation folds for choosing the model on TRAIN data. Automatically
+  # reduced when a class has fewer members than folds, so a --sample run does
+  # not crash where the full run would not.
+  cv_folds: 5

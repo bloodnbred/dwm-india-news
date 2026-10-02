@@ -20,7 +20,7 @@ from dwm.cli import app
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
-STAGES = ["mine", "report"]
+STAGES = ["report"]
 runner = CliRunner()
 
 
@@ -88,7 +88,7 @@ def test_etl_is_implemented_and_demands_staging(tmp_path: Path) -> None:
 
 @pytest.mark.parametrize(
     ("stage", "needed"),
-    [("features", "etl"), ("build", "features")],
+    [("features", "etl"), ("build", "features"), ("mine", "build")],
 )
 def test_implemented_stage_demands_its_prerequisite(
     stage: str, needed: str, tmp_path: Path

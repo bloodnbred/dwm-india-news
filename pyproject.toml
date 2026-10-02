@@ -2,7 +2,12 @@
 minversion = "8.0"
 testpaths = ["tests"]
 addopts = "-q --strict-markers"
-filterwarnings = ["ignore::DeprecationWarning"]
+filterwarnings = [
+  "ignore::DeprecationWarning",
+  # mlxtend's certainty metric divides by zero for perfectly co-occurring
+  # items, which is expected here and not a defect in this project.
+  "ignore:invalid value encountered in divide:RuntimeWarning",
+]
 
 [tool.coverage.run]
 branch = true

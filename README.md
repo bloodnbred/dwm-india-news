@@ -9,8 +9,8 @@ covers how to run it and what state each phase is in.
 
 ## Current state
 
-Phases 0-4 (scaffold, ingest, ETL + dimensions, features + facts, OLAP) are
-**built and verified**. Phases 5-9 are registered in the CLI but raise
+Phases 0-6 (scaffold, ingest, ETL + dimensions, features + facts, OLAP, mining)
+are **built and verified**. Phases 7-9 are registered in the CLI but raise
 `NotImplementedError` naming the phase, so the command surface is stable while
 the rest is written.
 
@@ -21,8 +21,8 @@ the rest is written.
 | 2 ETL + dims | `cln_*`, `dim_*`, `map_category_topic` | done, gate passes on real data |
 | 3 Features + facts | `fact_*`, `dim_keyword`, bridge, cubes | done, gate passes on real data |
 | 4 OLAP | `dwm/olap/`, SQL cookbook | done, verified against the warehouse |
-| 5-6 Mining | trends, bursts, clusters, rules, classifier | **next** |
-| 7 Inference | `facts.json`, `report.md` | stub |
+| 5-6 Mining | trends, bursts, clusters, rules, classifier | done, all 7 questions answered |
+| 7 Inference | `facts.json`, `report.md` | **next** |
 | 8 API + dashboard | FastAPI, Streamlit | stub |
 | 9 Polish | docs, report, viva sheet | partial |
 
@@ -57,14 +57,20 @@ Microsoft Store alias, so invoke the interpreter by full path.
 # build the fact tables and the cubes
 .\.venv\Scripts\python.exe -m dwm build
 
+# answer the seven research questions, writing reports/mining.json
+.\.venv\Scripts\python.exe -m dwm mine
+
 # OLAP: list the operations, or run one
 .\.venv\Scripts\python.exe -m dwm olap
 .\.venv\Scripts\python.exe -m dwm olap --op topic_mix
 .\.venv\Scripts\python.exe -m dwm olap --op slice -p topic=Business
 .\.venv\Scripts\python.exe -m dwm olap --op drill_across -p topic=Business --limit 20
 
-# the whole pipeline from scratch, with timings
+# the data pipeline from scratch, with timings
 powershell -ExecutionPolicy Bypass -File .\run_all.ps1 -clean
+
+# then answer the seven research questions
+.\.venv\Scripts\python.exe -m dwm mine
 
 # develop on a slice instead of the full file
 .\.venv\Scripts\python.exe -m dwm ingest --sample 50000
@@ -88,11 +94,17 @@ subsequent runs skip the download.
 .\.venv\Scripts\ruff.exe check .
 ```
 
-157 tests, no network access required. They cover config loading, date parsing
+206 tests, no network access required. They cover config loading, date parsing
 with its precision rules, staging against the row-count gate, the CSV
 normalisation fallback, the CLI contract, the ETL stage's dedupe grain and
 window derivation, the feature stage's measure definitions, the Phase 3
-fact/cube gate, and every OLAP operation.
+fact/cube gate, every OLAP operation, and the mining stage's guard rails.
+
+The mining tests check the promises rather than the numbers: that a rate is
+never reported without its denominator, that a statistic from too few
+observations is refused with a stated reason, that the payload carries no
+causal wording and no "fake news rate", and that the classifier is judged
+against the real majority baseline rather than against 50%.
 
 ## Timings, measured on the full corpus
 
@@ -102,7 +114,8 @@ fact/cube gate, and every OLAP operation.
 | `etl` | 9s |
 | `features` (3.15M headlines through VADER) | 165s cold, ~2s if already scored |
 | `build` (facts + cubes) | 5s |
-| **full clean run** | **about 3.3 minutes** |
+| `mine` (all seven research questions) | 86s, of which clustering is 73s |
+| **full clean run** | **about 4.7 minutes** |
 
 `features` is resumable and fingerprinted. An interrupted run continues from
 the last scored row instead of restarting, and a change to any measure
@@ -142,12 +155,21 @@ dwm/
     cubes.py         pre-aggregated cubes, sums only
   olap/
     operations.py  slice, dice, roll_up, drill_down, pivot, cube, drill_across
-  mining/ inference/ api/    (stubs)
+  mining/
+    trends.py           RQ1 topic mix, RQ2 bursts, with the partial-year guard
+    sensationalism.py   RQ3 risk-signal rate by topic, Wilson intervals
+    clustering.py       RQ4 TF-IDF + LSA + K-Means, k by silhouette
+    rules.py            RQ5 Apriori and FP-Growth, timing compared
+    market.py           RQ6 lagged correlation, trading days only
+    classifier.py       RQ7 Real vs Fake against the majority baseline
+  inference/ api/    (stubs)
 tests/
 docs/
   01-ingest-etl.md         ingest design, data traps, measured data profile
   02-warehouse-schema.md   dimensions, clean tables, gate results
   03-features-facts.md     measure definitions, cubes, Phase 3 gate
+  04-mining.md             the seven research questions and their answers
+  STATUS.md                handover notes and current state
 data/raw/            raw CSVs, gitignored
 warehouse/           dwm.duckdb, gitignored
 ```
