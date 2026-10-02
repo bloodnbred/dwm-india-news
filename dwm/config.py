@@ -47,7 +47,16 @@ def default_db_path() -> Path:
 
 
 def reports_dir() -> Path:
-    return PROJECT_ROOT / "reports"
+    """Where generated artefacts go.
+
+    Overridable through `DWM_REPORTS_DIR` so a test run, a sample run or a
+    second warehouse can never overwrite the real `reports/mining.json` and
+    `report.md`. Without this, running the test suite silently replaced the
+    full-corpus mining results with results computed from a ten-row fixture,
+    and the report then rendered three paired trading days.
+    """
+    override = os.environ.get("DWM_REPORTS_DIR")
+    return Path(override) if override else PROJECT_ROOT / "reports"
 
 
 def logs_dir() -> Path:

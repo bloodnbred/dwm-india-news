@@ -1,4 +1,4 @@
-"""Association rule mining (RQ5): Apriori and FP-Growth, with the timing compared.
+﻿"""Association rule mining (RQ5): Apriori and FP-Growth, with the timing compared.
 
 The blueprint asks for rules like `topic=Business, year=2016 => sensational=high`.
 That example is ATTRIBUTE-shaped, and the data forced the same conclusion.
@@ -34,6 +34,7 @@ import duckdb
 import numpy as np
 
 from dwm.logging_utils import get, human_int
+from dwm.mining.sampling import sample_rows
 
 log = get("dwm.mining.rules")
 
@@ -80,20 +81,25 @@ def build_attribute_transactions(
 
     selected = ", ".join(f"{expressions[i]} AS item_{i}" for i in items)
     total = con.execute("SELECT count(*) FROM fact_headline WHERE in_window").fetchone()[0]
-    take = min(sample, total)
 
-    rows = con.execute(
-        f"""
-        SELECT {selected}
-        FROM fact_headline f
-        JOIN dim_date d  ON d.date_key = f.date_key
-        JOIN dim_topic t ON t.topic_key = f.topic_key
-        WHERE f.in_window
-        USING SAMPLE reservoir({take} ROWS) REPEATABLE ({seed})
-        """
-    ).fetchall()
-
-    transactions = [frozenset(str(v) for v in r) for r in rows]
+    rows = sample_rows(
+        con,
+        f"f.headline_id, {selected}",
+        source=(
+            "fact_headline f "
+            "JOIN dim_date d ON d.date_key = f.date_key "
+            "JOIN dim_topic t ON t.topic_key = f.topic_key"
+        ),
+        where="WHERE f.in_window",
+        size=sample,
+        seed=seed,
+        order_by="f.headline_id",
+    )
+    # Column 0 is the headline id, kept only to satisfy the sampler's ordering
+    # requirement; the transaction is built from the attribute columns alone.
+    # Including the id would make every item unique, which turns a 7-item
+    # transaction into a 200,000-column matrix and 37 GB of allocation.
+    transactions = [frozenset(str(v) for v in r[1:]) for r in rows]
     sizes = [len(t) for t in transactions]
     distinct = len({frozenset(t) for t in transactions})
     log.info(
@@ -103,14 +109,21 @@ def build_attribute_transactions(
     )
     return {
         "transactions": transactions,
-        "items": items,
-        "sampled": take,
-        "corpus_total": total,
-        "mean_items": round(sum(sizes) / len(sizes), 3) if sizes else None,
-        "min_items": min(sizes) if sizes else 0,
-        "max_items": max(sizes) if sizes else 0,
-        "distinct_transactions": distinct,
-        "sparse": (sum(sizes) / len(sizes) < 2) if sizes else True,
+        # The summary is what a reader needs; the 200,000 frozensets are not.
+        # They pushed mining.json to 9.7 MB, and serialising them made the file
+        # differ between runs purely through set iteration order, which
+        # defeated the reproducibility check that compares two runs.
+        "summary": {
+            "items": items,
+            "sampled": len(transactions),
+            "corpus_total": total,
+            "mean_items": round(sum(sizes) / len(sizes), 3) if sizes else None,
+            "min_items": min(sizes) if sizes else 0,
+            "max_items": max(sizes) if sizes else 0,
+            "distinct_transactions": distinct,
+            "sparse": (sum(sizes) / len(sizes) < 2) if sizes else True,
+            "item_vocabulary_size": len({i for t in transactions for i in t}),
+        },
     }
 
 
@@ -126,21 +139,20 @@ def build_keyword_transactions(
     sample = int(cfg.get("sample_transactions", 100_000))
     seed = int(cfg.get("seed", 0))
 
-    total = con.execute(
-        "SELECT count(DISTINCT headline_id) FROM bridge_headline_keyword"
-    ).fetchone()[0]
-    take = min(sample, total)
-    rows = con.execute(
-        f"""
-        SELECT b.headline_id, list(k.term ORDER BY k.term)
-        FROM bridge_headline_keyword b
-        JOIN dim_keyword k ON k.keyword_key = b.keyword_key
-        JOIN fact_headline f ON f.headline_id = b.headline_id
-        WHERE f.in_window
-        GROUP BY 1
-        USING SAMPLE reservoir({take} ROWS) REPEATABLE ({seed})
-        """
-    ).fetchall()
+    rows = sample_rows(
+        con,
+        "b.headline_id, list(k.term ORDER BY k.term)",
+        source=(
+            "bridge_headline_keyword b "
+            "JOIN dim_keyword k ON k.keyword_key = b.keyword_key "
+            "JOIN fact_headline f ON f.headline_id = b.headline_id"
+        ),
+        where="WHERE f.in_window",
+        size=sample,
+        seed=seed,
+        order_by="b.headline_id",
+        group_by="GROUP BY b.headline_id",
+    )
     transactions = [frozenset(r[1]) for r in rows]
     sizes = [len(t) for t in transactions]
     log.info(
@@ -149,27 +161,64 @@ def build_keyword_transactions(
     )
     return {
         "transactions": transactions,
-        "sampled": len(transactions),
-        "mean_items": round(sum(sizes) / len(sizes), 3) if sizes else None,
-        "max_items": max(sizes) if sizes else 0,
-        "sparse": (sum(sizes) / len(sizes) < 2.5) if sizes else True,
+        "summary": {
+            "sampled": len(transactions),
+            "mean_items": round(sum(sizes) / len(sizes), 3) if sizes else None,
+            "max_items": max(sizes) if sizes else 0,
+            "sparse": (sum(sizes) / len(sizes) < 2.5) if sizes else True,
+        },
     }
 
 
 def _rules_to_records(rules: Any) -> list[dict[str, Any]]:
-    return [
-        {
-            "antecedent": sorted(str(x) for x in r[0]),
-            "consequent": sorted(str(x) for x in r[1]),
-            "support": round(float(r[2]), 6),
-            "confidence": round(float(r[3]), 6),
-            "leverage": round(float(r[4]), 6),
-            "lift": round(float(r[5]), 6),
-            "consequence": round(float(r[6]), 6),
-            "is_informative": float(r[3]) > float(r[2]),
+    """Convert mlxtend's rules DataFrame into plain records.
+
+    Columns are read **by name**, never by position. The positional version of
+    this was off by two: mlxtend orders the frame as
+    `antecedents, consequents, antecedent support, consequent support,
+    support, confidence, lift, ...`, so indexing r[2]..r[6] labelled the
+    consequent support as "confidence" and the confidence as "lift". Every one
+    of 1,804 rules then appeared to have lift exactly 1.000, which reads as
+    "the attributes are all tautologies" and is entirely an artefact of the
+    mislabelling. Column order also varies between mlxtend versions, so
+    positional access is wrong by construction, not just currently.
+
+    `is_informative` is lift > 1, which is the definition: a rule that predicts
+    its consequent no better than the base rate carries no information.
+    """
+    wanted = {
+        "antecedents": "antecedent",
+        "consequents": "consequent",
+        "support": "support",
+        "confidence": "confidence",
+        "lift": "lift",
+        "leverage": "leverage",
+    }
+    present = [c for c in wanted if c in rules.columns]
+    missing = [c for c in ("support", "confidence", "lift") if c not in rules.columns]
+    if missing:
+        raise RuntimeError(
+            f"mlxtend rule frame is missing {missing}; columns were "
+            f"{list(rules.columns)}"
+        )
+
+    records = []
+    for _, row in rules.iterrows():
+        support = float(row["support"])
+        confidence = float(row["confidence"])
+        lift = float(row["lift"])
+        record = {
+            wanted[c]: (
+                sorted(str(x) for x in row[c])
+                if c in ("antecedents", "consequents")
+                else round(float(row[c]), 6)
+            )
+            for c in present
         }
-        for r in rules
-    ]
+        record["is_informative"] = lift > 1.0
+        record["beats_base_rate"] = confidence > support
+        records.append(record)
+    return records
 
 
 def _run_apriori(
@@ -179,8 +228,13 @@ def _run_apriori(
 
     start = time.perf_counter()
     frame = _to_frame(transactions)
-    # mlxtend 0.25 dropped `use_ylib`; the flag is gone from both signatures.
-    frequent = apriori(frame, min_support=min_support, max_len=max_len)
+    # `use_colnames` defaults to False in mlxtend 0.23+, which makes the
+    # frequent itemsets hold column *indices*. The rules then come back as
+    # `5 => 4` instead of `topic=Business => year=2017`, which is unreadable and
+    # made the mined rules impossible to check against the data.
+    frequent = apriori(
+        frame, min_support=min_support, max_len=max_len, use_colnames=True
+    )
     elapsed = time.perf_counter() - start
     if frequent.empty:
         return [], elapsed
@@ -189,7 +243,7 @@ def _run_apriori(
     )
     if rules.empty:
         return [], elapsed
-    return _rules_to_records(rules.values), elapsed
+    return _rules_to_records(rules), elapsed
 
 
 def _run_fpgrowth(
@@ -200,8 +254,11 @@ def _run_fpgrowth(
     start = time.perf_counter()
     frame = _to_frame(transactions)
     # Same itemset search as apriori, so a difference in the resulting rules
-    # would mean a bug rather than a different answer.
-    frequent = fpgrowth(frame, min_support=min_support, max_len=max_len)
+    # would mean a bug rather than a different answer. `use_colnames` for the
+    # same reason: without it the rules carry column indices.
+    frequent = fpgrowth(
+        frame, min_support=min_support, max_len=max_len, use_colnames=True
+    )
     elapsed = time.perf_counter() - start
     if frequent.empty:
         return [], elapsed
@@ -210,7 +267,7 @@ def _run_fpgrowth(
     )
     if rules.empty:
         return [], elapsed
-    return _rules_to_records(rules.values), elapsed
+    return _rules_to_records(rules), elapsed
 
 
 def _to_frame(transactions: list[frozenset[str]]):
@@ -242,6 +299,7 @@ def mine_rules(
 
     built = build_attribute_transactions(con, config)
     transactions = built["transactions"]
+    summary = built["summary"]
     if not transactions:
         return {"ran": False, "reason": "no transactions could be built"}
 
@@ -270,13 +328,66 @@ def mine_rules(
         fpgrowth_seconds, identical,
     )
 
+    # Split the rule set, because ranking by lift alone puts tautologies on
+    # top. `2016-Q1 => 2016` is true by construction and scores exactly 1.000,
+    # and since the transaction items are not independent (year contains
+    # quarter) a large share of the rule set is of that shape. They are counted
+    # separately so the headline count is not inflated by arithmetic.
+    TAUTOLOGY_LIFT = 1.0005
+    tautologies = [r for r in apriori_rules if r["lift"] <= TAUTOLOGY_LIFT]
+    substantive = [r for r in apriori_rules if r["lift"] > TAUTOLOGY_LIFT]
     ranked = sorted(
-        apriori_rules, key=lambda r: (-r["lift"], -r["confidence"])
+        substantive or apriori_rules,
+        key=lambda r: (-r["lift"], -r["confidence"]),
     )
+    informative = [r for r in ranked if r["is_informative"] and r["beats_base_rate"]]
+    # Lift is maximised by rare consequents. The window ends 2020-06-30, so
+    # `2020-Q2` is a rare item and every rule pointing at it scores an
+    # impressive lift that says nothing beyond "Q2 2020 is uncommon". The
+    # support floor already limits this, but ranking purely by lift still
+    # surfaces it, so a second table is provided on confidence, which is not
+    # inflated by rarity in the same way.
+    by_confidence = sorted(
+        substantive or apriori_rules,
+        key=lambda r: (-r["confidence"], -r["lift"]),
+    )
+
+    # Name a real tautology rather than a remembered one, so the note stays
+    # true when the transaction items change.
+    example_tautology = (
+        " + ".join(tautologies[0]["antecedent"])
+        + " => "
+        + " + ".join(tautologies[0]["consequent"])
+        if tautologies
+        else None
+    )
+    # Check whether the top-lift rules really are dominated by the partial
+    # final period before claiming they are.
+    year_tokens = {
+        item for r in ranked[:10] for item in (*r["antecedent"], *r["consequent"])
+        if item.isdigit()
+    }
+    tail_year_dominates = bool(year_tokens) and any(
+        year_tokens and max(int(y) for y in year_tokens) >= 2020
+        for _ in [0]
+    )
+    lift_caveat = (
+        "Lift is maximised by rare consequents, and the window ends 2020-06-30, "
+        "so the final period is rare. The highest-lift table is therefore "
+        "dominated by rules pointing at it, which says only that the period is "
+        "uncommon. The confidence table is the more informative of the two."
+        if tail_year_dominates
+        else (
+            "The highest-lift table is not dominated by the partial final "
+            "period. Lift is still maximised by rare consequents in general, so "
+            "the confidence table below is the more informative of the two."
+        )
+    )
+
     return {
         "ran": True,
         "source": "attributes",
-        "transactions": built,
+        "transactions": summary,
         "thresholds": {
             "min_support": min_support,
             "min_confidence": min_confidence,
@@ -290,8 +401,24 @@ def mine_rules(
         "rules_in_apriori_not_fpgrowth": len(apriori_keys - fpgrowth_keys),
         "rules_in_fpgrowth_not_apriori": len(fpgrowth_keys - apriori_keys),
         "fpgrowth_speedup": round(speedup, 2) if speedup else None,
+        "tautological_rules": len(tautologies),
+        "substantive_rules": len(substantive),
+        "redundancy_note": (
+            f"{len(tautologies)} of {len(apriori_rules)} rules are tautologies "
+            "with lift exactly 1.000: the consequent is implied by the "
+            f"antecedent, as in `{example_tautology}`. The transaction items are "
+            "not independent — the sensational flag and the sentiment band are "
+            "derived from the same score, and a year implies every other item "
+            "carrying that year. Redundant items inflate the rule count without "
+            f"adding information, which is why {len(substantive)} substantive "
+            f"rules are reported alongside the {len(apriori_rules)} total."
+        )
+        if tautologies
+        else "No rule is a tautology; the transaction items are independent.",
         "top_rules": ranked[:25],
-        "informative_rules": [r for r in ranked if r["is_informative"]][:25],
+        "top_rules_by_confidence": by_confidence[:25],
+        "informative_rules": informative[:25],
+        "lift_caveat": lift_caveat,
         "note": (
             "Association, not causation. A rule states that two attributes "
             "co-occur more often than chance; it does not state that one "
@@ -319,20 +446,21 @@ def mine_keyword_rules(
         float(cfg.get("min_confidence", 0.30)),
         int(config.get("rules", {}).get("max_len", 3)),
     )
-    ranked = sorted(rules, key=lambda r: -r["lift"])[:25]
+    ranked = sorted(rules, key=lambda r: (-r["lift"], -r["confidence"]))[:25]
+    summary = built["summary"]
     return {
         "ran": True,
         "source": "keywords",
-        "transactions": built,
+        "transactions": summary,
         "rule_count": len(rules),
         "seconds": round(seconds, 4),
         "top_rules": ranked,
         "caveat": (
-            f"Mean {built['mean_items']} items per transaction. The 300-term "
+            f"Mean {summary['mean_items']} items per transaction. The 300-term "
             "vocabulary is dominated by functional words, so these "
             "transactions are close to empty and the rules are weak by "
             "construction. Reported for completeness, not as a finding."
-        ) if built["sparse"] else None,
+        ) if summary["sparse"] else None,
     }
 
 
@@ -343,3 +471,4 @@ def run_rules(
         "attribute_rules": mine_rules(con, config),
         "keyword_rules": mine_keyword_rules(con, config),
     }
+

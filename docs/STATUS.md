@@ -1,6 +1,6 @@
 # Where the project stands
 
-Written at the end of 2026-10-02, after Phase 6. Read this first in a new
+Written at the end of 2026-10-02, after Phase 8. Read this first in a new
 session, then `README.md` for how to run things and `docs/` for the design
 reasoning behind each stage.
 
@@ -8,33 +8,59 @@ reasoning behind each stage.
 
 | Phase | Gate | Result |
 |---|---|---|
-| 0 Scaffold | pytest runs, `--help` works | pass, 206 tests |
+| 0 Scaffold | pytest runs, `--help` works | pass, 265 tests |
 | 1 Ingest | staging row counts equal source | pass, zero rejects |
 | 2 ETL + dims | no null date keys, every category maps | pass |
 | 3 Features + facts | fact counts equal clean counts, keys unique | pass |
 | 4 OLAP | roll-up totals equal raw totals, cube equals fact | verified against the warehouse |
-| 5-6 Mining | slope matches a manual check; metrics on test split only; seeds reproduce | pass, all 7 questions answered |
+| 5-6 Mining | metrics on test split only; seeds reproduce | pass, all 7 questions answered |
+| 7 Inference | every fact has a source; every caution reaches the report | pass, 15 of 15 guards |
+| 8 API + dashboard | read-only; every panel's data path exercised | pass, 13 endpoints, 9 panels |
 
-The warehouse is at `warehouse/dwm.duckdb` and is fully built. `run_all.ps1`
-reproduces the data pipeline from scratch in about 4.7 minutes, and
-`python -m dwm mine` then answers the research questions in 86 seconds,
-writing `reports/mining.json`.
+Everything reproduces from raw CSV to `report.md` in about six minutes:
 
-## The two findings that matter most
+```
+powershell -ExecutionPolicy Bypass -File .\run_all.ps1 -clean
+.\.venv\Scripts\python.exe -m dwm serve
+.\.venv\Scripts\python.exe -m streamlit run dashboard\app.py
+```
 
-Both are negative, and both are the honest answer rather than a gap.
+`-skipAnalysis` rebuilds only the warehouse.
+
+## What the study found
+
+Three of the seven questions produced no result, or a result that reads better
+than it is. Those are reported with the measurement that establishes them, which
+is the point of the exercise.
 
 **There is no news signal in the headline volume.** Within-year volume
-coefficient of variation is 0.02 to 0.04, and the busiest month of a year runs
-only 2-5% above its own mean. March 2020, the month of the national lockdown,
-is 2.5% above its year mean. Worse, in the pandemic months Health and Sports
-coverage *fall* below their norms and negative sentiment reaches its lowest
-point in the series. The archive behaves like a fixed editorial capacity, not a
-reactive news feed.
+coefficient of variation is 0.0202 to 0.0352, and the busiest month of a year
+runs only 2-5% above its own mean. March 2020, the month of the national
+lockdown, is 2.5% above its year mean. A prediction fixed in config before the
+data was examined — that Health, Sports and Entertainment coverage would rise
+during the listed events — **failed in 5 of the 10 event months**, all three
+failing together. The archive behaves like a fixed editorial capacity.
 
-**These headlines have almost no cluster structure.** Silhouette is 0.069, and
-silhouette rises to the largest k tried without turning over, which indicates
-no preferred cluster count rather than that k=12 is right.
+**Topic structure exists but is narrow.** Silhouette is 0.2582, which clears
+the threshold for strong separation — but one cluster holds 94.88% of the
+corpus. What the three small clusters find is `rs crore`/`lakh` (money),
+`road`/`accident`/`killed` (traffic and crime) and `old`/`year old`
+(age-and-gender copy): **writing patterns, not desks**, and none of them a topic
+in the publisher's own taxonomy.
+
+**Headline volume does not relate to daily returns, but does relate to
+volatility.** Against returns the strongest coefficient is 0.0748 and only 1 of
+15 lag tests is significant, which is what chance produces. Against 20-day
+volatility, log business-headline volume correlates at **r = −0.2827**
+(p < 0.0001, 8% of variance): busier headline days go with calmer markets. The
+sign is unexplained and this data cannot explain it.
+
+The positives: `Education` carries a 10.94% risk-signal rate against a 3.77%
+corpus rate; 644 association rules are found identically by Apriori and
+FP-Growth; and the IFND classifier reaches 95.71% against a 65.9% majority
+baseline, +29.8 points, with Fake recall 91.4%.
+
+Full reasoning in `docs/04-mining.md`.
 
 ## Current row counts
 
@@ -50,124 +76,84 @@ bridge_headline_keyword 4,221,537   cube_day_topic       19,481
 ```
 
 Analysis window: **2015-06-30 to 2020-06-30**, derived from the data, never
-hard-coded. 1,113,427 headlines fall inside it.
+hard-coded. 1,113,427 headlines fall inside it, and `Local` is 69.95% of them.
 
-## Next: Phase 7, inference
+## Next: Phase 9, report and viva polish
 
-`dwm/inference/` is still a stub. `python -m dwm mine` now writes
-`reports/mining.json` (about 9.6 MB) containing every result the report needs,
-so the inference stage is a rendering job over that file rather than a
-recomputation. The blueprint requires deterministic templates filled from
-results, no LLM, so every number traces to a query.
+The last phase. `reports/report.md` is generated and complete, so what remains
+is presentation rather than construction:
 
-`dwm/api/` and the Streamlit dashboard are the remaining pieces after that.
+- a viva sheet mapping each question to the command that answers it and the
+  number it produces
+- diagrams for the star schema and the pipeline
+- tightening `README.md` as the single entry point
+- checking `BLUEPRINT.md` research questions against the seven answers one more
+  time, and reconciling the phase list with what was actually built
 
-## What mining already answers
+`dwm/inference/report.py` holds the prose, so wording changes are one file and
+one `python -m dwm report`, not an edit to a 28 KB markdown file.
 
-| Q | Question | Result |
-|---|---|---|
-| 1 | topic mix over the window | `Local` 70%; one 2017 filing artefact flagged |
-| 2 | which months spike | none; volume is flat, CV ≤ 0.035 |
-| 3 | which categories are sensational | Education 10.9%, CI 10.1-11.9%, n=4,450 |
-| 4 | natural topic clusters | silhouette 0.069, no preferred k |
-| 5 | co-occurrence rules | 1,797, both algorithms agree, FP-Growth 1.3x |
-| 6 | headlines vs Nifty | no meaningful association, abs r ≤ 0.075 |
-| 7 | Real vs Fake classifier | 95.7% vs 65.9% baseline, fake recall 91.4% |
+## Things a future session must not undo
 
-Full reasoning in `docs/04-mining.md`.
+**The keyword vocabulary cannot support association rules.** It yields 1.99
+items per headline because its top terms are functional words, and the keyword
+run produces **zero** rules. RQ5 mines attributes, which carry 6.00 items each.
+The keyword result is reported as a finding about the feature, not hidden.
 
-## How mining used the warehouse
+**`quarter` is deliberately absent from the default transaction items.** Year
+and quarter are redundant in both directions. Including both produced 1,797
+rules that were overwhelmingly year/quarter arithmetic, and pushed every
+high-lift rule toward `2020-Q2`, rare only because the window ends mid-year.
 
-Everything the mining modules need already existed:
+**`Unknown` and `Other` are excluded from the RQ3 ranking.** `Unknown` tops the
+raw ranking at 17.29% because it is a filing gap, not a subject. A reader told
+"Unknown is the most sensational topic" has been told nothing.
 
-- `fact_headline` carried `date_key`, `topic_key`, `sentiment_*`,
-  `sensational_score`, `is_risk_signal`, `in_window`
-- `bridge_headline_keyword` plus `dim_keyword` gave the vocabulary, though
-  measurement showed keyword transactions hold only 1.02 items each, so
-  association rules were mined from **attributes** instead
-- `fact_statement` carried `label_key` and the IFND text for the classifier
-- `fact_market_daily` carried `return_pct` and `volatility_20d`
-- `cube_day_topic` supplied the daily aggregate the market join needed
+**The sensationalism threshold is 0.2208**, the measured 95th percentile. It is
+a chosen cut-off, so the sensitivity table must be shown with it.
 
-- `fact_headline` carries `date_key`, `topic_key`, `sentiment_*`,
-  `sensational_score`, `is_risk_signal`, `in_window`
-- `bridge_headline_keyword` plus `dim_keyword` give the 300-term vocabulary
-  and the transactions for Apriori
-- `fact_statement` carries `label_key` and the IFND text, for the classifier
-- `fact_market_daily` carries `return_pct`, `volatility_20d`, `date_key`
-- `cube_day_topic` gives daily headline counts and sentiment sums, already
-  joined to trading days by the Phase 4 `drill_across`
+**All figures on the unlabelled corpus are risk-signal rates.** Only the IFND
+classifier states an accuracy, and only as an upper bound because part of the
+Fake class is LSTM-augmented.
 
-The seven research questions map onto the work as follows, and the Phase 4
-operations that feed each one are already working:
+## Traps in this codebase
 
-## Decisions already made that mining must respect
+- **DuckDB's `SAMPLE n ROWS (bernoulli, seed)` is a parser error**, and
+  `reservoir(n ROWS) REPEATABLE (seed)` **returns the wrong number of rows**
+  (709 for 2000 requested). Use `dwm/mining/sampling.py`, which sorts on
+  `hash(column, seed)`.
+- **`silhouette_score` subsamples with no seed by default.** Pass `random_state`
+  or the score moves between identical runs.
+- **Read mlxtend's rule columns by name.** The frame is ordered
+  `antecedents, consequents, antecedent support, consequent support, support,
+  confidence, lift`; reading positionally is off by two and made every rule look
+  like a tautology. Pass `use_colnames=True` to `apriori`/`fpgrowth`.
+- **`unnest(?)` does not work in DuckDB 1.5.6.** A bound list cannot be cast to
+  `INTEGER[]`. Do small aggregations in Python.
+- **mlxtend 0.25 removed `use_ylib`.** `cross_val_score` raises when a class has
+  fewer members than the fold count, so folds are capped by the smallest class.
+- **A partial year poisons whole-year statistics.** 2015 has seven months; its
+  wider spread made a flat series look like CV 0.39.
+- **Never hard-code a dimension key.** `dim_dataset` numbers by sorted code, so
+  `toi` is key 3, not 1. This was a real bug that pointed every headline at the
+  wrong source.
+- **`DWM_REPORTS_DIR` exists so tests cannot overwrite the real
+  `reports/mining.json`.** It did, once, and the next report rendered three
+  paired trading days as the finding.
+- **Resolve the reports path by calling `reports_dir()`, not at import time.**
+  A module-level constant froze it, and redirection then depended on import
+  order.
 
-- **The sensationalism threshold is 0.2208**, the measured 95th percentile,
-  flagging 5.01% of headlines. The first guess of 0.5 flagged 156 of 3.15M
-  rows, which would have made Q3 unanswerable. Because it is a chosen cut-off,
-  the report must present the rate across a range of thresholds, not this one
-  number. The distribution is recorded in `config/features.yaml`.
-- **`Local` is 70% of the window** and is a *where*, not a *what*. Use
-  `dim_topic.topic_group` to separate `Place` from `Subject` when answering
-  anything about subject mix.
-- **The IFND majority-class baseline is 66.7%**, not 50%. A classifier that
-  always answers "real" already scores 0.667, so accuracy alone is meaningless
-  for Q7. Report precision and recall on the Fake class against that baseline.
-- **IFND dates are unusable for time analysis.** 33% of statements have a
-  month at best, 13% have a day with no year, 20% have nothing. The classifier
-  does not use dates, but nothing time-based may be attempted on IFND.
-- **Never call an unlabelled measure a fake-news rate.** On TOI it is a
-  risk-signal rate. Only IFND supports accuracy claims, and only from the
-  classifier.
-- **Correlations are associations.** Q6 must be reported as a correlation over
-  trading days, never as an effect of news on markets.
-- **Use `sampling` seeds fixed** so results reproduce. Clustering and
-  classifier results must be identical across runs; there is a test pattern
-  for this in the other stages.
-
-## Things that will bite you
-
-- **Scoring 3.15M headlines takes about 165 seconds** and holds the database
-  exclusively. Do not run any other stage against `warehouse/dwm.duckdb` at
-  the same time; DuckDB allows one writer and the second process fails with
-  "file is being used by another process". This cost me several wasted runs.
-- **Do not pass `ignore_errors` to `read_csv`.** On duckdb 1.5.6 it silently
-  discarded 15,730 of 56,714 IFND rows while `count(*)` still reported the
-  full number. Always reconcile the materialised count.
-- **`executemany` is a trap.** It is one statement per row and was 98% of the
-  feature stage's runtime. Use the Arrow bulk insert helper.
-- **The process pool is a trap on Windows.** It measured 39 rows/s against
-  25,900 serial, because pickling headline text to workers costs more than
-  the work. Serial wins; the pool is off by default.
-- **Never hard-code a dimension key in SQL.** `dim_dataset` numbers rows by
-  sorted code, so `toi` is key 3, not 1. Look it up. This was a real bug.
-- **Guard rails for small data.** The blueprint requires the Phase 7 gate to
-  fire on small data. Mining returns a stated reason rather than dividing by
-  zero: correlations need at least 3 points, RQ6 needs 100 paired trading
-  days, the classifier needs 2 members per class, and cross-validation folds
-  are capped by the smallest class so a `--sample` run does not crash.
-- **`unnest(?)` does not work in DuckDB 1.5.6.** A bound list parameter
-  cannot be cast to `INTEGER[]` for `unnest`. Do the small aggregation in
-  Python instead.
-- **`USING SAMPLE n ROWS (bernoulli, seed)` is rejected.** A discrete row count
-  needs `USING SAMPLE reservoir(n ROWS) REPEATABLE (seed)`.
-- **A partial year poisons whole-year statistics.** 2015 holds seven months
-  and its higher spread made a flat series look like CV 0.39. Exclude years
-  below `full_year_months` from any such claim and name them.
-
-## Where the interesting reasoning lives
+## Files worth reading in this order
 
 | file | what it records |
 |---|---|
 | `docs/01-ingest-etl.md` | the four data traps, the measured data profile |
 | `docs/02-warehouse-schema.md` | dimensions, clean tables, the Phase 2 gate |
 | `docs/03-features-facts.md` | every measure's definition and why, the Phase 3 gate |
-| `docs/04-mining.md` | the seven questions, and the two negative findings |
+| `docs/04-mining.md` | the seven questions, and the three negative results |
+| `docs/05-inference-api.md` | traceability, the guard rails, the API |
 | `BLUEPRINT.md` | the original design, unchanged |
-| `config/features.yaml` | weights, thresholds, and the threshold calibration data |
 | `config/mining.yaml` | every mining threshold, seed and sample size |
-| `reports/mining.json` | the machine-readable results the report will quote |
-
-The viva sheet in `BLUEPRINT.md` section 6 is the thing to be able to talk
-through without notes. Every answer in it is backed by something in `docs/`.
+| `reports/report.md` | the generated report |
+| `reports/mining.json` | the machine-readable results it is rendered from |

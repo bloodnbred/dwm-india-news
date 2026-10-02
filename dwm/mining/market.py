@@ -231,6 +231,30 @@ def lagged_correlation(
         "later return does not establish that the headline moved the market; "
         "both respond to other events on the same day."
     )
+    # Fifteen lag tests at alpha 0.05 produce about 0.75 false positives by
+    # chance, so a single significant lag is not a discovery. Counting the
+    # tests and the expected count is what stops one p-value below 0.05 being
+    # read as a finding.
+    tests = sum(len(m["by_lag"]) for m in result["measures"].values())
+    significant = [
+        {"measure": name, "lag": r["lag_trading_days"], "p_value": r["p_value"],
+         "pearson_r": r["pearson_r"]}
+        for name, m in result["measures"].items()
+        for r in m["by_lag"]
+        if r.get("significant_at_alpha")
+    ]
+    result["significance_accounting"] = {
+        "tests_run": tests,
+        "alpha": alpha,
+        "expected_false_positives": round(tests * alpha, 2),
+        "significant_results": significant,
+        "exceeds_chance": len(significant) > tests * alpha,
+        "note": (
+            "A significant result among many tests is expected. Count the "
+            "significant results against the expected false positives before "
+            "treating any of them as a finding."
+        ),
+    }
     return result
 
 
@@ -294,20 +318,40 @@ def volatility_association(
     ):
         r = _pearson(series, volatility)
         p = _p_value(r, n)
+        significant = p is not None and p < alpha
         out[name] = {
             "pearson_r": round(r, 5) if np.isfinite(r) else None,
             "p_value": round(p, 6) if p is not None else None,
-            "significant_at_alpha": (p is not None and p < alpha),
+            "significant_at_alpha": significant,
             "n": n,
+            # r-squared is reported because a significant correlation is not
+            # the same as a useful one, and the two are easy to conflate when
+            # only the coefficient and the p-value are shown.
+            "r_squared": round(r * r, 5) if np.isfinite(r) else None,
+            "variance_explained_pct": round(r * r * 100, 3) if np.isfinite(r) else None,
         }
+
+    strongest_name = max(
+        out,
+        key=lambda k: abs(out[k]["pearson_r"]) if out[k]["pearson_r"] is not None else -1,
+        default=None,
+    )
+    strongest = (
+        {**out[strongest_name], "name": strongest_name} if strongest_name else None
+    )
     return {
         "ran": True,
         "topic": topic,
         "observations": n,
         "measures": out,
+        "strongest": strongest,
+        "any_significant": any(v["significant_at_alpha"] for v in out.values()),
         "note": (
             "Volatility is null until 20 sessions are available, so this uses "
-            f"{n} of the trading days in the window. Association only."
+            f"{n} of the trading days in the window. Association only. A "
+            "significant coefficient here is not evidence of an effect: "
+            "headline volume and market volatility both respond to the same "
+            "underlying events, and nothing here separates their directions."
         ),
     }
 

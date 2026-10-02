@@ -563,6 +563,26 @@ def list_operations() -> list[dict[str, Any]]:
     ]
 
 
+def run_operation(
+    con: duckdb.DuckDBPyConnection, operation: str, **params: Any
+) -> dict[str, Any]:
+    """Run one operation against an already-open connection.
+
+    Split out from `run_olap` so the API can serve the same operations over a
+    long-lived read-only connection. Two dispatch paths would be two chances
+    for the CLI and the API to disagree about what an operation returns.
+    """
+    if operation not in OPERATIONS:
+        raise KeyError(
+            f"unknown OLAP operation {operation!r}. Known: {sorted(OPERATIONS)}"
+        )
+    kwargs = dict(DEFAULT_PARAMS.get(operation, {}))
+    kwargs.update(params or {})
+    result = OPERATIONS[operation](con, **kwargs)
+    log.info("%s: %s rows", result.operation, human_int(len(result.rows)))
+    return result.to_dict()
+
+
 def run_olap(
     settings: Settings, operation: str | None = None, **params: Any
 ) -> dict[str, Any]:
@@ -573,15 +593,8 @@ def run_olap(
     if operation not in OPERATIONS:
         raise KeyError(f"unknown OLAP operation {operation!r}. Known: {sorted(OPERATIONS)}")
 
-    kwargs = dict(DEFAULT_PARAMS.get(operation, {}))
-    kwargs.update(params or {})
-
     con = connect(settings)
     try:
-        result = OPERATIONS[operation](con, **kwargs)
-        log.info(
-            "%s: %s rows", result.operation, human_int(len(result.rows))
-        )
-        return result.to_dict()
+        return run_operation(con, operation, **params)
     finally:
         con.close()

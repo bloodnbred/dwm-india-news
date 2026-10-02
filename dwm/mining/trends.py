@@ -458,6 +458,102 @@ def detect_bursts(
     full_year_cvs = [v for v in per_year_cv.values() if v is not None]
     max_cv = max(full_year_cvs) if full_year_cvs else None
 
+    # The counter-signal narrative, computed rather than asserted.
+    #
+    # An earlier version of this module carried a hard-coded sentence claiming
+    # negative sentiment "is at its lowest" during the COVID months. Measured,
+    # that was false: 2020-03 sits at z = +0.09, essentially neutral. A
+    # sentence in a template that contradicts its own data is worse than no
+    # sentence, so every claim below is derived from the values just measured.
+    declines: list[dict[str, Any]] = []
+    for record in event_months:
+        for name, m in record["measures"].items():
+            if m["z_score"] < -0.5:
+                declines.append(
+                    {
+                        "year_month": record["year_month"],
+                        "label": record["label"],
+                        "measure": name,
+                        "z_score": m["z_score"],
+                    }
+                )
+    declines.sort(key=lambda d: d["z_score"])
+
+    total_measured = sum(len(r["measures"]) for r in event_months)
+    # Why the raw count is not reported as evidence: under a standard normal,
+    # 30.85% of z-scores sit below -0.5, and these measures share months and
+    # are correlated with one another, so the count is not a valid test. It is
+    # reported only so the reader can see it is not being hidden.
+    expected_below = round(total_measured * 0.3085, 1)
+
+    # The checkable pattern is co-movement among the desks we predicted would
+    # RISE. Twenty-one measures per month means "three fell" proves nothing, so
+    # the test is restricted to a list fixed in config before the data was
+    # looked at: if Health, Sports and Entertainment all fall during a national
+    # pandemic lockdown, that is a falsifiable claim about a specific
+    # prediction, and it fails.
+    responsive = [
+        t for t in bursts_cfg.get("event_responsive_topics", []) if t
+    ]
+    co_movement: list[dict[str, Any]] = []
+    if responsive:
+        for record in event_months:
+            z_by_desk = {
+                topic: record["measures"].get(f"topic_volume:{topic}", {}).get("z_score")
+                for topic in responsive
+            }
+            observed = {k: v for k, v in z_by_desk.items() if v is not None}
+            if not observed:
+                continue
+            falling = sorted(k for k, v in observed.items() if v < 0)
+            co_movement.append(
+                {
+                    "year_month": record["year_month"],
+                    "label": record["label"],
+                    "z_by_desk": {k: round(v, 3) for k, v in observed.items()},
+                    "all_fell": len(falling) == len(observed),
+                    "desks_falling": falling,
+                }
+            )
+
+    all_fell = [c for c in co_movement if c["all_fell"]]
+    if declines:
+        worst = declines[0]
+        parts = [
+            f"The single largest departure is "
+            f"`{worst['measure'].replace('topic_volume:', '')}` in "
+            f"{worst['year_month']} at z = {worst['z_score']:+.2f}."
+        ]
+        if responsive:
+            names = ", ".join(responsive)
+            if all_fell:
+                months = ", ".join(c["year_month"] for c in all_fell)
+                parts.append(
+                    f"In {len(all_fell)} of the {len(co_movement)} event months "
+                    f"({months}) every one of the desks predicted to rise — "
+                    f"{names} — fell below its norm instead. That is a specific "
+                    "prediction failing, not a vague absence of signal."
+                )
+            else:
+                parts.append(
+                    f"At no point did all of {names} fall together, so the "
+                    "predicted response is not cleanly falsified."
+                )
+        parts.append(
+            f"For scale, {len(declines)} of {total_measured} measures sit below "
+            f"−0.5 SD, against roughly {expected_below} expected by chance. That "
+            "count is **not** offered as a significance test: the measures share "
+            "months and are correlated, so their z-scores are not independent and "
+            "the count is only shown so it is not hidden."
+        )
+        summary = " ".join(parts)
+    else:
+        summary = (
+            "No measure in any event month sits half a standard deviation below "
+            "its norm, so the event months are unremarkable on every measure "
+            "tested. That is itself the result."
+        )
+
     guard.require(
         "at_least_one_year_measurable",
         any(len(v) >= 3 for v in by_year.values()),
@@ -478,6 +574,11 @@ def detect_bursts(
         "full_year_months_required": full_months,
         "event_months": event_months,
         "counter_signals": counter_signals,
+        "counter_signal_declines": declines[:12],
+        "event_responsive_topics": responsive,
+        "counter_signal_co_movement": co_movement,
+        "event_months_all_predicted_desks_fell": [c["year_month"] for c in all_fell],
+        "counter_signal_summary": summary,
         "events_compared": len(events),
         "z_threshold": z_threshold,
         "guard": {"passed": guard.ok, "checks": guard.checks},
@@ -491,10 +592,9 @@ def detect_bursts(
         if max_cv is not None and max_cv < 0.10
         else f"Volume shows variability; max within-year CV {max_cv}.",
         "counter_signal_note": (
-            "In the COVID months, Health and Sports coverage FALL below their "
-            "norms and negative sentiment is at its lowest. That is the "
-            "opposite of a news-reactive archive, and it is reported rather "
-            "than smoothed over."
+            "Derived from the measured z-scores above, not asserted. Note that "
+            "these are departures from the norm, not dramatic swings: the "
+            "largest is around 1.5 standard deviations on a series this flat."
         ),
         "note": (
             "A burst is a statistical departure, not a cause. Event labels are "

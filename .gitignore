@@ -25,8 +25,12 @@ warehouse/*.duckdb.wal
 warehouse/*.wal
 
 # --- generated artefacts ---
-reports/facts.json
-reports/report.md
+# All three are fully regenerable: `dwm mine` writes mining.json, `dwm report`
+# writes facts.json and report.md from it. They are ignored together so the
+# repository never carries a stale copy of a number the pipeline can rebuild,
+# and so a diff never mixes code changes with regenerated results.
+reports/*.json
+reports/*.md
 logs/
 *.log
 !pip-install.log

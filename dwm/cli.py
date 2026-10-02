@@ -242,11 +242,28 @@ def mine(
 def report(
     db: DbOpt = None, years: YearsOpt = 5, out: Annotated[Path | None, typer.Option("--out")] = None
 ) -> None:
-    """Generate facts.json and the final report from warehouse results."""
-    from dwm.inference import run_report
+    """Generate facts.json and report.md from the mining results.
+
+    Renders only; it does not recompute. Exits non-zero when an inference
+    guard fails, so a broken warehouse cannot pass silently.
+    """
+    from dwm.inference import run_inference
 
     settings = _settings(db, None, years, 100_000)
-    _echo_json(run_report(settings, out))
+    result = run_inference(settings)
+    if out is not None:
+        import shutil
+
+        destination = out if out.is_dir() else out.parent
+        destination.mkdir(parents=True, exist_ok=True)
+        target = destination / "report.md" if out.is_dir() else out
+        shutil.copyfile(result["report_path"], target)
+        result["report_path"] = str(target)
+    _echo_json(result)
+    if not result["gate_passed"]:
+        # Loud failure, by design: the blueprint's gate exists to stop a
+        # pipeline passing on a warehouse that cannot support its claims.
+        raise typer.Exit(code=1)
 
 
 @app.command()

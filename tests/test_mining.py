@@ -1,4 +1,4 @@
-"""Phase 5-6 mining tests.
+﻿"""Phase 5-6 mining tests.
 
 The emphasis is on the guard rails rather than on the numbers, because the
 numbers on the real corpus are already recorded in reports/mining.json. What
@@ -20,109 +20,13 @@ from pathlib import Path
 
 import pytest
 
-from dwm.config import Settings, load_datasets_config
-from dwm.etl import run_etl
-from dwm.features.runner import load_features_config, run_features
-from dwm.ingest.staging import stage_dataset
-from dwm.mining import SECTIONS, load_mining_config, run_mining
+from dwm.config import Settings
+from dwm.mining import SECTIONS, run_mining
 from dwm.mining.classifier import _metrics
 from dwm.mining.market import _p_value, _pearson, _spearman
 from dwm.mining.rules import _to_frame, build_attribute_transactions
 from dwm.mining.sensationalism import wilson_interval
 from dwm.mining.trends import Guard, _coefficient_of_variation, _zscores
-from dwm.warehouse import run_build
-
-TOI_ROWS = [
-    "publish_date,headline_category,headline_text",
-    "20160101,sports.cricket,India win the final over comfortably",
-    "20160103,business.markets,Sensex gains as profits beat expectations",
-    "20160106,sports.cricket,SHOCKING! India CRUSHED in final OVER!!!",
-    "20160107,business.markets,Sensex falls as profits disappoint badly",
-    "20160110,city.mumbai,Mumbai rains bring relief after a long dry spell",
-    "20170103,business.markets,Sensex gains on budget hopes",
-    "20170104,sports.cricket,India wins another final comfortably",
-    "20180103,business.markets,Sensex ends year on a high note",
-    "20180104,technology.gadgets,Phone camera claims to be the best ever",
-    "20180105,city.bengaluru,Bengaluru traffic plan announced for metro",
-]
-
-IFND_ROWS = [
-    "id,Statement,Image,Web,Category,Date,Label",
-    '1,"A calm statement about policy",a.jpg,SITE,POLITICS,Oct-20,TRUE',
-    '2,"SHOCKING government admits massive failure!!",b.jpg,SITE,GOVERNMENT,Oct-20,Fake',
-    '3,"Third statement with a neutral tone",c.jpg,SITE,VIOLENCE,Nov 2020,FALSE',
-    '4,"Fourth statement about courts",d.jpg,SITE,POLITICS,20-Sep,TRUE',
-    '5,"Fifth statement with no date",e.jpg,SITE,ELECTION,,FALSE',
-    '6,"Sixth calm statement",f.jpg,SITE,POLITICS,Oct-20,TRUE',
-    '7,"Seventh calm statement",g.jpg,SITE,GOVERNMENT,Nov 2020,TRUE',
-    '8,"Eighth calm statement",h.jpg,SITE,POLITICS,Oct-20,TRUE',
-    '9,"Ninth calm statement",i.jpg,SITE,GOVERNMENT,Nov 2020,TRUE',
-    '10,"Tenth calm statement",j.jpg,SITE,POLITICS,Oct-20,TRUE',
-]
-
-NIFTY_ROWS = [
-    "Date,Open,High,Low,Close,Volume,Turnover",
-    "04-01-2016,100,110,95,105,1000,10.5",
-    "05-01-2016,105,115,100,112,1100,11.5",
-    "06-01-2016,112,120,108,118,1200,12.5",
-    "07-01-2016,118,125,115,124,1300,13.5",
-    "03-01-2017,124,130,120,128,1500,15.5",
-    "04-01-2017,128,135,125,132,1600,16.5",
-    "05-01-2017,132,140,130,138,1700,17.5",
-    "06-01-2017,138,145,135,142,1800,18.5",
-    "03-01-2018,142,148,138,145,1900,19.5",
-    "04-01-2018,145,152,142,150,2000,20.5",
-    "05-01-2018,150,156,147,154,2100,21.5",
-    "06-01-2018,154,160,150,158,2200,22.5",
-]
-
-
-def _write(directory: Path, name: str, lines: list[str]) -> Path:
-    path = directory / name
-    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
-    return path
-
-
-@pytest.fixture
-def mining_db(tmp_path: Path, settings: Settings, monkeypatch):
-    """A complete warehouse with a small, fast mining configuration."""
-    import dwm.features.runner as runner
-
-    features_cfg = copy.deepcopy(load_features_config())
-    features_cfg["runtime"]["use_multiprocessing"] = False
-    features_cfg["keywords"]["min_doc_frequency"] = 1
-    monkeypatch.setattr(runner, "load_features_config", lambda *a, **k: features_cfg)
-
-    mining_cfg = copy.deepcopy(load_mining_config())
-    # Small samples so the fixture runs in seconds, and low thresholds so the
-    # sparse fixture still yields transactions.
-    mining_cfg["clustering"]["sample_size"] = 400
-    mining_cfg["clustering"]["k_min"] = 2
-    mining_cfg["clustering"]["k_max"] = 3
-    mining_cfg["clustering"]["min_df"] = 1
-    mining_cfg["clustering"]["svd_components"] = 5
-    mining_cfg["rules"]["sample_transactions"] = 500
-    mining_cfg["rules"]["min_support"] = 0.10
-    mining_cfg["rules"]["keyword_rules"]["sample_transactions"] = 200
-    mining_cfg["market"]["min_observations"] = 3
-    monkeypatch.setattr("dwm.mining.load_mining_config", lambda *a, **k: mining_cfg)
-
-    specs = load_datasets_config()
-    from dwm.db import connect
-
-    con = connect(settings)
-    paths = {
-        "toi": _write(tmp_path, "india-news-headlines.csv", TOI_ROWS),
-        "ifnd": _write(tmp_path, "IFND.csv", IFND_ROWS),
-        "nifty": _write(tmp_path, "nifty50.csv", NIFTY_ROWS),
-    }
-    for code, path in paths.items():
-        stage_dataset(con, specs[code], path, settings=settings)
-    run_etl(settings, con=con)
-    run_features(settings, con=con)
-    run_build(settings, con=con)
-    yield con, mining_cfg
-    con.close()
 
 
 def _scalar(con, sql: str):
@@ -471,9 +375,14 @@ def test_attribute_transactions_have_enough_items(mining_db) -> None:
     con, cfg = mining_db
     built = build_attribute_transactions(con, cfg)
     assert built["transactions"]
-    assert built["mean_items"] >= 3
-    assert not built["sparse"]
-    assert set(built["items"]) >= {"topic", "year", "sentiment_band"}
+    summary = built["summary"]
+    assert summary["mean_items"] >= 3
+    assert not summary["sparse"]
+    assert set(summary["items"]) >= {"topic", "year", "sentiment_band"}
+    # The headline id must not leak into a transaction: it is unique per row,
+    # which would make the item vocabulary as large as the sample and the
+    # boolean matrix 37 GB.
+    assert summary["item_vocabulary_size"] < summary["sampled"] * 10
 
 
 def test_transaction_frame_has_one_column_per_item() -> None:
@@ -483,6 +392,118 @@ def test_transaction_frame_has_one_column_per_item() -> None:
     assert frame.shape == (3, 3)
     assert bool(frame.iloc[0]["a"]) is True
     assert bool(frame.iloc[0]["c"]) is False
+
+
+def test_rule_columns_are_read_by_name_not_position() -> None:
+    """Regression: the worst bug in the project, and it looked like a finding.
+
+    mlxtend orders its rule frame as
+    `antecedents, consequents, antecedent support, consequent support,
+    support, confidence, lift, ...`, so reading r[2]..r[6] positionally
+    labelled the *consequent support* as "confidence" and the *confidence* as
+    "lift". Every one of 1,797 rules then appeared to have lift exactly 1.000,
+    which reads as "the attributes are all tautologies" and is pure
+    mislabelling. Column order also varies between mlxtend versions, so
+    positional access is wrong by construction.
+    """
+    import pandas as pd
+
+    from dwm.mining.rules import _rules_to_records
+
+    frame = pd.DataFrame(
+        [
+            {
+                "antecedents": frozenset({"a"}),
+                "consequents": frozenset({"b"}),
+                "antecedent support": 0.8,
+                "consequent support": 0.6,
+                "support": 0.5,
+                "confidence": 0.625,
+                "lift": 1.0417,
+                "leverage": 0.02,
+            }
+        ]
+    )
+    (record,) = _rules_to_records(frame)
+    assert record["support"] == 0.5
+    assert record["confidence"] == 0.625
+    assert record["lift"] == 1.0417
+    # A positional reader would have produced 0.6, 0.5 and 0.625 here.
+    assert record["lift"] != 0.625
+    assert record["antecedent"] == ["a"]
+    assert record["is_informative"] is True
+
+
+def test_rule_columns_must_exist() -> None:
+    """A missing column must fail loudly rather than shift every label."""
+    import pandas as pd
+
+    from dwm.mining.rules import _rules_to_records
+
+    frame = pd.DataFrame([{"antecedents": frozenset({"a"}), "consequents": frozenset({"b"})}])
+    with pytest.raises(RuntimeError, match="missing"):
+        _rules_to_records(frame)
+
+
+def test_rules_carry_item_names_not_column_indices(mining_db) -> None:
+    """Without use_colnames=True the antecedents are integers like `5`.
+
+    A year attribute is legitimately the string `2016`, so the check is against
+    the set of items the transaction builder can actually produce, not against
+    "is this numeric".
+    """
+    from dwm.mining.rules import build_attribute_transactions, mine_rules
+
+    con, cfg = mining_db
+    built = build_attribute_transactions(con, cfg)
+    known = {i for t in built["transactions"] for i in t}
+    assert known, "the fixture must produce some transactions"
+
+    result = mine_rules(con, cfg)
+    assert result["ran"]
+    for rule in result["top_rules"]:
+        for item in (*rule["antecedent"], *rule["consequent"]):
+            assert item in known, (
+                f"rule item {item!r} is not a transaction attribute; it looks like "
+                f"a column index. Known items include {sorted(known)[:6]}"
+            )
+
+
+def test_tautologies_are_separated_from_substantive_rules(mining_db) -> None:
+    """`2016-Q1 => 2016` is arithmetic, and must not top the table."""
+    from dwm.mining.rules import mine_rules
+
+    con, cfg = mining_db
+    result = mine_rules(con, cfg)
+    assert "tautological_rules" in result
+    assert "substantive_rules" in result
+    assert (
+        result["tautological_rules"] + result["substantive_rules"]
+        == result["apriori"]["rule_count"]
+    )
+    if result["substantive_rules"]:
+        assert all(r["lift"] > 1.0005 for r in result["top_rules"])
+        # The note must name a tautology that actually exists in this run.
+        note = result["redundancy_note"]
+        if result["tautological_rules"]:
+            assert "`" in note and "=>" in note
+
+
+def test_the_default_transaction_items_are_not_redundant() -> None:
+    """Year and quarter are redundant in both directions.
+
+    Including both produced 1,797 rules, overwhelmingly `2020-Q1 => 2016`-style
+    arithmetic. The default set must contain year (which the blueprint's own
+    example uses) and not quarter.
+    """
+    from dwm.mining import load_mining_config
+
+    items = load_mining_config()["rules"]["transaction_items"]
+    assert "year" in items
+    assert "quarter" not in items
+    # And they must actually be different, so a duplicate cannot reappear
+    # silently through some future edit.
+    assert len(items) == len(set(items))
 
 
 def test_frame_handles_an_empty_transaction_set() -> None:
@@ -693,3 +714,128 @@ def test_metrics_helper_flags_a_useless_model() -> None:
     assert result["fake_recall"] == 0.0
     assert result["accuracy"] == 0.75
     assert result["lift_over_baseline_pp"] == pytest.approx(0.0)
+
+
+# ---------------------------------------------------------------------------
+# reproducibility, which the project claims and the report asserts
+# ---------------------------------------------------------------------------
+
+
+def test_sampler_returns_exactly_the_rows_requested(mining_db) -> None:
+    """The bug this replaces: reservoir returned 709 of 2000 requested."""
+    from dwm.mining.sampling import sample_rows
+
+    con, _ = mining_db
+    available = con.execute(
+        "SELECT count(*) FROM fact_headline WHERE in_window"
+    ).fetchone()[0]
+    for size in (1, 2, 5, 10, 10_000):
+        rows = sample_rows(
+            con, "headline_id", source="fact_headline",
+            where="WHERE in_window", size=size, seed=1,
+        )
+        assert len(rows) == min(size, available), size
+
+
+def test_sampler_is_identical_for_the_same_seed(mining_db) -> None:
+    from dwm.mining.sampling import sample_rows
+
+    con, _ = mining_db
+    args = {"source": "fact_headline", "where": "WHERE in_window", "size": 8}
+    assert sample_rows(con, "headline_id", seed=7, **args) == sample_rows(
+        con, "headline_id", seed=7, **args
+    )
+
+
+def test_sampler_changes_with_the_seed(mining_db) -> None:
+    """A seed that did not change the draw would not be a seed."""
+    from dwm.mining.sampling import sample_rows
+
+    con, _ = mining_db
+    args = {"source": "fact_headline", "where": "WHERE in_window", "size": 8}
+    assert sample_rows(con, "headline_id", seed=7, **args) != sample_rows(
+        con, "headline_id", seed=8, **args
+    )
+
+
+def test_sampler_actually_spreads_across_the_corpus(mining_db) -> None:
+    """Guards against a sampler that quietly returns the first n rows.
+
+    The original top-up fallback did exactly that, converting a random sample
+    into a chronological one and biasing every downstream result toward the
+    oldest slice of the corpus. Asking for the whole table makes the check
+    structural: the rows must come back in hash order, not id order.
+    """
+    from dwm.mining.sampling import sample_rows
+
+    con, _ = mining_db
+    total = con.execute("SELECT count(*) FROM fact_headline").fetchone()[0]
+    assert total > 3
+    ids = [
+        r[0]
+        for r in sample_rows(
+            con, "headline_id", source="fact_headline", size=total, seed=3
+        )
+    ]
+    assert sorted(ids) == list(range(min(ids), min(ids) + total))
+    assert ids != sorted(ids), "rows must come back in hash order, not id order"
+
+
+def test_sampler_covers_the_whole_id_range(mining_db) -> None:
+    """A sample of a subset of the ids would be a first-n sampler."""
+    from dwm.mining.sampling import sample_rows
+
+    con, _ = mining_db
+    lo, hi = con.execute(
+        "SELECT min(headline_id), max(headline_id) FROM fact_headline"
+    ).fetchone()
+    total = con.execute("SELECT count(*) FROM fact_headline").fetchone()[0]
+    ids = {
+        r[0]
+        for r in sample_rows(con, "headline_id", source="fact_headline", size=total, seed=5)
+    }
+    assert min(ids) == lo and max(ids) == hi
+
+
+def test_silhouette_is_reproducible() -> None:
+    """Regression: silhouette_score subsamples with no seed by default.
+
+    Without an explicit random_state the score moved between runs of an
+    otherwise identical pipeline, which made the report's claim that fixed
+    seeds reproduce every number false.
+    """
+    import numpy as np
+    from sklearn.metrics import silhouette_score
+
+    rng = np.random.default_rng(0)
+    matrix = rng.random((500, 12))
+    labels = np.array([i % 4 for i in range(500)])
+    first = silhouette_score(matrix, labels, sample_size=200, random_state=42)
+    assert first == silhouette_score(matrix, labels, sample_size=200, random_state=42)
+
+
+def test_mining_is_reproducible_end_to_end(mining_db) -> None:
+    """Two runs over one warehouse must agree on every reported number.
+
+    Wall-clock timings are excluded deliberately. The speedup ratio is a
+    measurement of this machine, not a result, and asserting it would make the
+    test flaky on a loaded box rather than catching a real regression.
+    """
+    from dwm.mining import run_mining
+
+    con, _ = mining_db
+    settings = Settings(db_path="unused")
+    first = run_mining(settings, con=con)["headline_findings"]
+    second = run_mining(settings, con=con)["headline_findings"]
+    for key in (
+        "volume_is_flat", "max_within_year_volume_cv", "risk_signal_rate_corpus",
+        "event_counter_signals", "clusters", "classifier",
+    ):
+        assert first[key] == second[key], key
+    assert first.get("most_sensational_topic") == second.get("most_sensational_topic")
+    assert first["association_rules"]["count"] == second["association_rules"]["count"]
+    assert (
+        first["association_rules"]["identical_across_algorithms"]
+        == second["association_rules"]["identical_across_algorithms"]
+    )
+

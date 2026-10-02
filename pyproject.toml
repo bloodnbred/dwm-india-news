@@ -7,6 +7,9 @@ filterwarnings = [
   # mlxtend's certainty metric divides by zero for perfectly co-occurring
   # items, which is expected here and not a defect in this project.
   "ignore:invalid value encountered in divide:RuntimeWarning",
+  # starlette's TestClient warns that it prefers httpx2. It works, and pinning
+  # httpx is a deliberate choice for this project.
+  "ignore:Using `httpx` with `starlette.testclient` is deprecated:Warning",
 ]
 
 [tool.coverage.run]

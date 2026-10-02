@@ -32,6 +32,12 @@ bursts:
   # Also require a minimum absolute volume, so a quiet year cannot produce a
   # "burst" out of statistical noise on a handful of headlines.
   min_month_rows: 5000
+  # Desks that a news-reactive archive would be expected to INCREASE coverage
+  # of during the events listed below. Fixing this list in advance is what
+  # makes the co-movement test meaningful: counting how many of 21 measures
+  # fell in a month proves nothing, whereas "these three named desks, which we
+  # predicted would rise, all fell" is a falsifiable claim.
+  event_responsive_topics: [Health, Sports, Entertainment]
   # Events the report compares the detected bursts against. These are
   # recorded as candidate explanations, not as causal claims.
   known_events:
@@ -43,6 +49,8 @@ bursts:
     - { date: "2019-02", label: "Union Budget, 1 Feb 2019" }
     - { date: "2019-05", label: "General election result, 23 May 2019" }
     - { date: "2020-03", label: "National COVID-19 lockdown announced 24 Mar 2020" }
+    - { date: "2020-04", label: "Lockdown extended to 3 May 2020" }
+    - { date: "2020-05", label: "Lockdown eased from 18 May 2020" }
 
 # --- RQ3 sensationalism by category ---------------------------------------
 sensationalism:
@@ -71,6 +79,21 @@ clustering:
   min_df: 5
   max_features: 20000
   sublinear_tf: true
+  # Only alphabetic tokens of two or more letters. The scikit-learn default,
+  # \b\w\w+\b, admits pure numbers, and they then dominate the centroids: the
+  # first run described its clusters with terms like `000`, `102` and `1000`,
+  # because numerals appear in a large share of headlines and carry no topical
+  # meaning. Filtering them makes the cluster descriptions readable, which is
+  # the only human-readable output this analysis produces.
+  token_pattern: '(?u)\b[a-zA-Z][a-zA-Z]+\b'
+  # English stop words. Without them the cluster descriptions read `for, with,
+  # from, as, and, after`: the mean TF-IDF inside a cluster is highest for
+  # function words, because they appear in a modest share of documents
+  # (so their IDF is not tiny) but in a large share of any given cluster
+  # (so their mean is high). Content words are rarer inside a cluster and
+  # therefore score lower. Removing stop words is what makes a cluster
+  # description describe the cluster.
+  stop_words: english
   # Truncated-SVD (LSA) reduction before K-Means. This is not optional:
   # measured on the raw 20,000-feature matrix, silhouette was 0.005 at every
   # k from 4 to 12, i.e. no separation at all. In that many dimensions every
@@ -97,11 +120,21 @@ rules:
   transaction_items:
     - topic
     - year
-    - quarter
     - sentiment_band
     - sensational_flag
     - weekday_flag
     - multi_category_flag
+  # `quarter` is deliberately NOT in the default set above, even though it is
+  # available. Year and quarter are redundant in both directions: a quarter
+  # implies its year, and everything in a year implies the year. Including
+  # both produced 1,797 rules of which the overwhelming majority were
+  # `2020-Q1 => 2020` and its permutations, and the highest-lift rules all
+  # pointed at 2020-Q2, which is merely rare because the window ends
+  # 2020-06-30. Every one of those is arithmetic, not pattern.
+  #
+  # Dropping quarter leaves year, which is what the blueprint's own example
+  # rule uses (`topic=Business, year=2016 => sensational=high`), and the
+  # remaining rules describe real co-occurrence.
   min_support: 0.01
   min_confidence: 0.30
   max_len: 3

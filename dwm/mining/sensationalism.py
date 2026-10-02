@@ -234,7 +234,10 @@ def threshold_sensitivity(
             """
         ).fetchall()
         rates = {c: (flag / n if n else 0.0) for c, flag, n in counts}
-        ranked = sorted(rates.items(), key=lambda kv: -kv[1])
+        # The topic name is the tie-break, not an accident of dict order. Two
+        # topics with equal rates swapped places between runs, which made a
+        # stable ranking look unstable.
+        ranked = sorted(rates.items(), key=lambda kv: (-kv[1], kv[0]))
         table.append(
             {
                 "threshold": thr,
@@ -248,6 +251,19 @@ def threshold_sensitivity(
             }
         )
 
+    # Stability is judged on the topics that mean something. `Unknown` tops
+    # the raw ranking at some thresholds because it is a filing gap rather
+    # than a subject, so counting it as an unstable "top topic" would report a
+    # non-finding as a caveat about the ranking itself.
+    uninformative = {"Unknown", "Other"}
+    informative_top1: set[str] = set()
+    for row in table:
+        candidates = [
+            c for c in (row["top1"], *row["top3"]) if c not in uninformative
+        ]
+        if candidates:
+            informative_top1.add(candidates[0])
+
     top1 = {r["top1"] for r in table}
     chosen_row = next((r for r in table if r["is_chosen_threshold"]), None)
     return {
@@ -256,7 +272,15 @@ def threshold_sensitivity(
         "min_topic_rows": min_rows,
         "topics_considered": len(names),
         "distinct_top1_across_thresholds": sorted(top1),
-        "ranking_is_stable": len(top1) == 1,
+        "distinct_top1_excluding_uninformative": sorted(informative_top1),
+        "ranking_is_stable": len(informative_top1) == 1,
+        "ranking_is_stable_including_uninformative": len(top1) == 1,
+        "stability_note": (
+            "`Unknown` appears as the top topic at some thresholds because it is "
+            "a filing gap, not a subject. Stability is judged on the informative "
+            "topics only; the raw count is reported alongside so the difference is "
+            "visible rather than hidden."
+        ),
         "chosen_threshold_ranking": chosen_row["ranking"] if chosen_row else None,
         "note": (
             "A ranking that changes its top topic as the cut-off moves is an "

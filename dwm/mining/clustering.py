@@ -35,6 +35,19 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics import silhouette_score
 
 from dwm.logging_utils import get
+from dwm.mining.sampling import sample_rows
+
+
+def pct(value: float | None, places: int = 2) -> str:
+    """Local copy rather than an import from the report layer.
+
+    The mining stage must not depend on the inference stage that renders it;
+    a percentage-formatting helper duplicated between the two is a smaller
+    cost than an inverted dependency between phases.
+    """
+    if value is None:
+        return "n/a"
+    return f"{value * 100:.{places}f}%"
 
 log = get("dwm.mining.clustering")
 
@@ -44,42 +57,19 @@ def sample_corpus(
 ) -> tuple[list[str], list[int]]:
     """A reproducible random sample of headline text.
 
-    Sampled in SQL with a seeded shuffle rather than in Python, so the draw
-    does not depend on fetching 1.1M rows into memory first.
+    The draw happens in SQL, ordered by a seeded hash, so it does not depend on
+    fetching 1.1M rows into Python first. See `dwm/mining/sampling.py` for why
+    the built-in sampler was not used.
     """
     where = "WHERE in_window" if in_window else ""
-    total = con.execute(
-        f"SELECT count(*) FROM fact_headline {where}"
-    ).fetchone()[0]
-    if not total:
-        return [], []
-    take = min(size, total)
-    # DuckDB rejects `SAMPLE n ROWS (bernoulli, seed)`: a discrete row count
-    # needs reservoir sampling, and REPEATABLE is what makes it seedable.
-    rows = con.execute(
-        f"""
-        SELECT headline_id, headline_text, topic_key
-        FROM fact_headline {where}
-        USING SAMPLE reservoir({take} ROWS) REPEATABLE ({seed})
-        """
-    ).fetchall()
-    # Top up deterministically if the draw came up short, so the sample size is
-    # what the caller asked for rather than whatever the sampler returned. The
-    # exclusion key must be the headline_id actually selected above, not the
-    # text, or the top-up keeps rows that are already in the sample.
-    if len(rows) < take:
-        have = {int(r[0]) for r in rows}
-        extra = [
-            r
-            for r in con.execute(
-                f"""
-                SELECT headline_id, headline_text, topic_key FROM fact_headline
-                {where} ORDER BY headline_id
-                """
-            ).fetchall()
-            if int(r[0]) not in have
-        ][: take - len(rows)]
-        rows = rows + extra
+    rows = sample_rows(
+        con,
+        "headline_id, headline_text, topic_key",
+        source="fact_headline",
+        where=where,
+        size=size,
+        seed=seed,
+    )
     return [r[1] for r in rows], [r[2] for r in rows]
 
 
@@ -114,6 +104,12 @@ def cluster_headlines(
         sublinear_tf=sublinear,
         strip_accents="unicode",
         lowercase=True,
+        # Alphabetic tokens only, and no English stop words. Without the first
+        # the top terms of every cluster are numerals; without the second they
+        # are function words. Both were observed, and both made the cluster
+        # descriptions useless as the only human-readable output of this stage.
+        token_pattern=cfg.get("token_pattern", r"(?u)\b[a-zA-Z][a-zA-Z]+\b"),
+        stop_words=cfg.get("stop_words", "english"),
     )
     tfidf = vectorizer.fit_transform(texts)
     terms = np.array(vectorizer.get_feature_names_out())
@@ -142,8 +138,17 @@ def cluster_headlines(
     for k in range(k_min, k_max + 1):
         model = KMeans(n_clusters=k, random_state=seed, n_init=10)
         labels = model.fit_predict(reduced)
+        # random_state is required. silhouette_score subsamples when the corpus
+        # is large, and with no seed it draws a different subsample on every
+        # call, so the score moved between runs of an otherwise identical
+        # pipeline: 0.0652 then 0.0681 for the same k and the same sample.
         silhouette = float(
-            silhouette_score(reduced, labels, sample_size=min(20_000, len(labels)))
+            silhouette_score(
+                reduced,
+                labels,
+                sample_size=min(20_000, len(labels)),
+                random_state=seed,
+            )
         )
         scores.append({"k": k, "silhouette": round(silhouette, 4)})
         log.info("  k=%s silhouette=%.4f", k, silhouette)
@@ -154,8 +159,21 @@ def cluster_headlines(
     assert best is not None
     k, silhouette, labels, model = best
 
-    # Describe each cluster by its highest-weight terms.
-    terms_per_cluster = int(config.get("clustering", {}).get("top_terms", 12))
+    # Describe each cluster by the mean TF-IDF of its own documents.
+    #
+    # Not by the K-Means centroid weights. The centroid lives in the 100-
+    # dimension LSA space, and projecting its weights back onto the term axis
+    # does not recover which words define the cluster: measured here, it
+    # returned `aadhaar, aadmi, aap, aarti, aaryan` for every cluster, because
+    # the SVD components carry an arbitrary sign and an arbitrary scale, and
+    # small numerical asymmetries make alphabetically-early features win
+    # systematically. A cluster described by words that appear in all of them
+    # describes nothing.
+    #
+    # Averaging the members' own TF-IDF rows is the standard approach and is
+    # immune to that: it says which words are actually over-represented inside
+    # this cluster relative to the corpus.
+    terms_per_cluster = int(cfg.get("top_terms", 12))
     # Topic names resolved once, rather than per cluster through SQL:
     # DuckDB 1.5.6 cannot cast a bound list parameter into an INTEGER[] for
     # unnest, and the histogram is a handful of rows either way.
@@ -163,11 +181,12 @@ def cluster_headlines(
         con.execute("SELECT topic_key, topic_name FROM dim_topic").fetchall()
     )
     descriptions = []
-    order = model.cluster_centers_.argsort()[:, ::-1]
     for cluster_id in range(k):
-        top = [str(terms[i]) for i in order[cluster_id][:terms_per_cluster]]
         member_mask = labels == cluster_id
         members = int(member_mask.sum())
+        # Mean TF-IDF across the cluster, over the original sparse matrix.
+        profile = np.asarray(tfidf[member_mask].mean(axis=0)).ravel()
+        top = [str(terms[i]) for i in profile.argsort()[::-1][:terms_per_cluster]]
         # Which supplied topics dominate this cluster, so a reader can see
         # whether it lines up with the publisher's own taxonomy.
         topic_hist: dict[int, int] = {}
@@ -194,6 +213,19 @@ def cluster_headlines(
 
     descriptions.sort(key=lambda d: -d["size"])
 
+    # A single cluster holding almost everything inflates the silhouette.
+    #
+    # Silhouette scores a document by its distance to its own cluster against
+    # its distance to the nearest other one, so a large undifferentiated blob
+    # that sits far from a few small tight ones scores very well. Measured
+    # here, removing stop words moved the silhouette from 0.068 to 0.26 and
+    # produced exactly that shape: one cluster over 90% of the corpus and three
+    # small topical ones. The number is real and it is also easy to over-read,
+    # so the concentration is reported next to it.
+    dominant_share = descriptions[0]["share_of_sample"] if descriptions else None
+    concentrated = bool(dominant_share is not None and dominant_share >= 0.5)
+    small_clusters = [d for d in descriptions[1:] if d["share_of_sample"] >= 0.01]
+
     # A silhouette near zero means the clusters are not really separated.
     strong = silhouette >= 0.25
     # A silhouette that keeps rising to the largest k tried is not evidence of
@@ -218,6 +250,19 @@ def cluster_headlines(
         "chosen_k": k,
         "silhouette": round(silhouette, 4),
         "silhouette_is_strong": strong,
+        "dominant_cluster_share": round(dominant_share, 4) if dominant_share is not None else None,
+        "structure_is_concentrated": concentrated,
+        "distinct_small_clusters": len(small_clusters),
+        "concentration_note": (
+            f"One cluster holds {pct(dominant_share)} of the sample and "
+            f"{len(small_clusters)} further clusters hold at least 1% each. A high "
+            "silhouette in this shape does not mean the corpus is well clustered: "
+            "it means a small, well-separated topical minority exists and the "
+            "remainder is undifferentiated. Read the score and the shape together."
+        ) if concentrated else (
+            f"The largest cluster holds {pct(dominant_share)} of the sample, so "
+            "the silhouette is not being propped up by a single dominant blob."
+        ),
         "no_preferred_k": bool(k_at_ceiling or monotone_rising),
         "k_note": (
             f"Silhouette is highest at k={k_max}, the largest value tried, and "
@@ -276,6 +321,11 @@ def sample_stability(
         max_features=int(cfg.get("max_features", 20_000)),
         sublinear_tf=bool(cfg.get("sublinear_tf", True)),
         strip_accents="unicode",
+        # Same token pattern and stop list as the main run, or the two
+        # partitions would live in different feature spaces and cluster
+        # identity would not transfer between them.
+        token_pattern=cfg.get("token_pattern", r"(?u)\b[a-zA-Z][a-zA-Z]+\b"),
+        stop_words=cfg.get("stop_words", "english"),
     )
     tfidf = vectorizer.fit_transform(texts)
     n_components = min(
