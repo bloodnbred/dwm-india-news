@@ -490,20 +490,6 @@ function renderGlossary() {
     </section>`;
 }
 
-/** The plain reading of a cluster, replacing a bare list of tokens. */
-function clusterGloss(clusterId) {
-  const plain = state.summary.plain || {};
-  const terms = (plain.cluster_terms || {})[String(clusterId)];
-  if (!terms) return "";
-  const raw = (terms.raw || []).map((t) => `<code>${esc(t)}</code>`).join(", ");
-  return `
-    <div class="clustergloss">
-      ${terms.summary ? `<div class="clustergloss__plain">${esc(terms.summary)}</div>` : ""}
-      ${terms.note ? `<div class="clustergloss__note">${esc(terms.note)}</div>` : ""}
-      ${raw ? `<div class="clustergloss__raw">Distinguishing words: ${raw}</div>` : ""}
-    </div>`;
-}
-
 function pageOverview() {
   const outcomes = (state.summary.outcomes || {});
   const list = outcomes.outcomes || [];
@@ -1590,8 +1576,18 @@ async function loadTableList(selector, caption) {
   mountCharts();
 }
 
+/** Attach the behaviour of whichever Explore tab is showing.
+ *
+ *  Every tab that has listeners needs one wired here. `wireOlap` was defined and
+ *  then, when the old OLAP form was removed, its call was dropped along with it
+ *  — so the operation grid rendered and clicking a card did nothing at all. A
+ *  defined-but-uncalled function is invisible to a syntax check and to every
+ *  test, which is why `test_every_wired_function_is_called` now asserts against
+ *  exactly that.
+ */
 async function wireExplore() {
   const tab = state.route.tab || "Headlines";
+  if (tab === "OLAP") await wireOlap();
   if (tab === "Pipeline") await wirePipeline();
 }
 

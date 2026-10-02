@@ -172,6 +172,85 @@ def test_every_chart_fills_its_frame(theme: str) -> None:
         assert "autosize" in blob, f"{name} ({theme}) has no autosize, so it will not fit"
 
 
+def _js_without_comments(source: str) -> str:
+    """Strip `//` and block comments.
+
+    Without this the test is worthless in a subtle way: the docstring above
+    *mentions* `wireOlap`, so dropping its call still leaves two references and
+    the check passes. Verified by reintroducing the bug and watching it pass.
+    """
+    without_block = re.sub(r"/\*.*?\*/", " ", source, flags=re.DOTALL)
+    return re.sub(r"(?m)^\s*//.*$", " ", without_block)
+
+
+def test_every_wired_function_is_actually_called() -> None:
+    """A function that is defined but never used is invisible.
+
+    `wireOlap` was defined, and its call was dropped while replacing the old OLAP
+    form — so the ten operation cards rendered, clicking one did nothing, and
+    nothing failed: `node --check` passes, the endpoint works, every render test
+    passes, and the panel is simply inert.
+
+    Counted by *reference*, not by syntactic call, because a function can be
+    reached several ways: called directly, used as a fallback after `||`, or
+    stored as a value in the tab-dispatch table. The one thing all of them have
+    in common is that the name appears in **code**, somewhere other than its
+    definition — hence the comment strip.
+    """
+    js = _text(JS)
+    code = _js_without_comments(js)
+
+    defined = set(re.findall(r"^function (\w+)\(", code, flags=re.MULTILINE))
+    defined |= set(re.findall(r"^async function (\w+)\(", code, flags=re.MULTILINE))
+    assert len(defined) > 40, (
+        f"found only {len(defined)} top-level functions; the pattern is probably "
+        f"wrong and this test would pass vacuously"
+    )
+
+    dead = []
+    for name in sorted(defined):
+        references = len(re.findall(rf"\b{re.escape(name)}\b", code))
+        if references <= 1:  # the definition itself
+            dead.append(name)
+    assert not dead, (
+        f"defined but never referenced: {dead}. Dead code, or — worse — a "
+        f"listener that was wired and then orphaned, which renders a control "
+        f"that does nothing."
+    )
+
+
+def test_every_explore_tab_is_reachable() -> None:
+    """Every tab in the Explore list must dispatch to something real.
+
+    A tab whose body function does not exist renders a blank panel with no
+    error, which is the same class of failure as an orphaned listener.
+    """
+    js = _text(JS)
+    body = re.search(
+        r"const body = \{(.*?)\}\[tab\]", js, flags=re.DOTALL
+    )
+    assert body, "the Explore tab dispatch table was not found"
+    entries = re.findall(r"(\w+)\s*:\s*(\w+)", body.group(1))
+    assert len(entries) >= 4, f"only {len(entries)} Explore tabs are dispatched"
+
+    for tab_name, fn in entries:
+        assert fn in js, f"the {tab_name!r} tab points at {fn!r}, which does not exist"
+        assert re.search(rf"function {re.escape(fn)}\s*\(", js), (
+            f"the {tab_name!r} tab points at {fn!r}, which is never defined"
+        )
+
+    # And the tab list the user sees must match the dispatch table, or a tab
+    # falls through to the default and silently shows the wrong panel.
+    listed = re.search(
+        r'pageExplore = \(\).*?tabs\(\[(.*?)\]', js, flags=re.DOTALL
+    )
+    if listed:
+        names = re.findall(r'"([^"]+)"', listed.group(1))
+        dispatched = {tab_name for tab_name, _ in entries}
+        missing = [n for n in names if n not in dispatched]
+        assert not missing, f"tabs shown but not dispatched: {missing}"
+
+
 def test_the_document_declares_a_theme_before_first_paint() -> None:
     """A flash of the wrong theme reads as a broken page.
 
