@@ -73,11 +73,8 @@ yesterday's blue.
 Do the cheap static checks first — a token typo, a missing id, a wrong key, a
 contrast failure — because each has a real chance of being the actual cause.
 
-Then **ask for a screenshot**, and be specific about where to put it:
-
-```
-C:\\Users\\DELL\\DWM-Project\\_shot.png
-```
+Then **ask for a screenshot**, and be specific about where to put it — at the
+repository root, named `_shot.png`.
 
 Note that Win+Shift+S creates a *folder* with that name containing
 `Screenshot <timestamp>.png` files. Glob for
