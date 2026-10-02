@@ -921,6 +921,252 @@ input[type="number"], input[type="text"] {
 }
 .footer strong { color: var(--muted); font-weight: 600; }
 
+/* ── the plain-language layer ─────────────────────────────────────────────
+   Sits above the technical content rather than replacing it. Same numbers, no
+   method vocabulary, each with the sentence that turns a measurement into a
+   conclusion. The technical pages are still one click away, because an examiner
+   asks about silhouette and lift, and a project that hid them would look shallow.
+   ──────────────────────────────────────────────────────────────────────── */
+
+.intro {
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--r-lg);
+  padding: 24px 28px 22px;
+  margin-bottom: 30px;
+  box-shadow: var(--shadow-sm);
+}
+
+.intro__heading {
+  font-size: .72rem;
+  font-weight: 660;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 12px;
+}
+
+.intro__p {
+  font-size: 1.03rem;
+  line-height: 1.62;
+  color: var(--ink);
+  max-width: 68ch;
+  margin: 0 0 .85em;
+}
+.intro__p:last-child { margin-bottom: 0; }
+
+/* ── the thirty-second summary ─────────────────────────────────────────── */
+
+.summary { margin-top: 8px; }
+
+.summary__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.finding {
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-sm);
+  padding: 20px 22px;
+  scroll-margin-top: 90px;
+}
+
+.finding__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 9px;
+}
+
+.finding__n {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px; height: 20px;
+  flex: 0 0 20px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: .72rem;
+  font-weight: 680;
+}
+
+.finding__rq {
+  font-family: var(--mono);
+  font-size: .68rem;
+  font-weight: 600;
+  letter-spacing: .03em;
+  color: var(--faint);
+}
+
+.finding__claim {
+  font-size: 1.14rem;
+  font-weight: 650;
+  letter-spacing: -.022em;
+  line-height: 1.28;
+  margin-bottom: 10px;
+}
+
+.finding__body {
+  font-size: .885rem;
+  line-height: 1.58;
+  color: var(--muted);
+  margin: 0 0 12px;
+}
+
+/* The "so what". The sentences that turn a measurement into a conclusion, and
+   the reason the whole plain layer exists. */
+.finding__sowhat {
+  background: var(--surface-2);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-md);
+  padding: 12px 14px;
+  font-size: .865rem;
+  line-height: 1.56;
+  color: var(--ink);
+}
+
+.finding__sowhatlabel {
+  display: block;
+  font-size: .66rem;
+  font-weight: 680;
+  letter-spacing: .085em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 4px;
+}
+
+.summary__why {
+  margin-top: 18px;
+  font-size: .85rem;
+  line-height: 1.6;
+  color: var(--faint);
+  max-width: 72ch;
+  padding-left: 2px;
+}
+
+/* ── plain reading, above the technical answer on a finding page ───────── */
+
+.plainread {
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--r-lg);
+  padding: 20px 24px;
+  margin-bottom: 26px;
+  box-shadow: var(--shadow-sm);
+}
+
+.plainread__label {
+  font-size: .68rem;
+  font-weight: 660;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 8px;
+}
+
+.plainread__body {
+  font-size: 1.02rem;
+  line-height: 1.6;
+  margin: 0 0 12px;
+  max-width: 70ch;
+}
+
+.plainread .callout { margin-bottom: 0; }
+
+.scale-note { max-width: none; }
+
+/* ── a number, with its range ──────────────────────────────────────────── */
+
+.scale {
+  margin-top: auto;
+  padding-top: 9px;
+  font-size: .715rem;
+  line-height: 1.45;
+  color: var(--faint);
+  border-top: 1px solid var(--hairline);
+}
+
+/* ── glossary ──────────────────────────────────────────────────────────── */
+
+.glossary { margin-top: 34px; }
+
+.glossary__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 22px;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-lg);
+  padding: 6px 22px;
+  box-shadow: var(--shadow-sm);
+}
+
+.gloss {
+  padding: 13px 0;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.gloss__term {
+  font-size: .87rem;
+  font-weight: 640;
+  letter-spacing: -.012em;
+  margin-bottom: 3px;
+}
+
+.gloss__plain {
+  font-size: .835rem;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+/* An inline glossary term. The definition is in the markup, not a tooltip, so
+   it survives without hovering and cannot be clipped off-screen. */
+.term {
+  text-decoration: underline dotted var(--accent);
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+  cursor: help;
+  font-style: normal;
+  border: 0;
+}
+
+/* ── cluster glosses ────────────────────────────────────────────────────── */
+
+.clustergloss { margin-top: 2px; }
+
+.clustergloss__plain {
+  font-size: .875rem;
+  font-weight: 550;
+  color: var(--ink);
+  margin-bottom: 3px;
+}
+
+.clustergloss__note {
+  font-size: .78rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.clustergloss__raw {
+  font-size: .74rem;
+  color: var(--faint);
+  margin-top: 6px;
+}
+
+table.data code {
+  background: var(--surface-sunk);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: .78em;
+  white-space: nowrap;
+}
+
 /* ── loading and toast ────────────────────────────────────────────────── */
 
 .loading { padding: 70px 0; text-align: center; color: var(--muted); }

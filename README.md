@@ -151,7 +151,7 @@ subsequent runs skip the download.
 .\.venv\Scripts\ruff.exe check .
 ```
 
-371 tests, no network access required. They cover config loading, date parsing
+386 tests, no network access required. They cover config loading, date parsing
 with its precision rules, staging against the row-count gate, the CSV
 normalisation fallback, the CLI contract, the ETL stage's dedupe grain and
 window derivation, the feature stage's measure definitions, the Phase 3
@@ -250,6 +250,8 @@ dashboard/
   helpers.py         find_uncautoned and formatting, testable without a browser
 dwm/ui/
   charts.py          Vega-Lite specs built in Python, themed, one palette
+dwm/inference/
+  plain.py           the plain-language layer: intro, 30-second summary, glossary
   helpers.py         design system + formatting, so "no figure without a caveat"
                      is testable without a browser
 tests/

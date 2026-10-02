@@ -287,6 +287,37 @@ def test_text_contrast_meets_wcag_aa(theme: str) -> None:
 
 
 @pytest.mark.parametrize("theme", ["light", "dark"])
+def test_the_plain_layer_components_are_all_styled(theme: str) -> None:
+    """The plain layer's components must exist as classes in both themes.
+
+    Every one of these was added at once and each is a new surface, so each is a
+    new chance to have readable text on an unstyled or wrong-coloured box.
+    Asserted on class names rather than on rendered pixels because there is no
+    browser here — the same reasoning as the token check.
+    """
+    css = _text(CSS)
+    for selector in (
+        ".intro", ".intro__p", ".finding", ".finding__claim", ".finding__body",
+        ".finding__sowhat", ".finding__sowhatlabel", ".plainread",
+        ".plainread__body", ".scale", ".glossary__grid", ".gloss__term",
+        ".gloss__plain", ".term", ".summary__why", ".clustergloss__plain",
+    ):
+        assert selector in css, f"no rule for {selector}"
+
+    # The accent-coloured labels on the plain blocks must clear AA on the surface
+    # they sit on, in both themes, or the section headings disappear.
+    tokens = _tokens(css, f'[data-theme="{theme}"]')
+    ratio = _contrast(tokens["--accent"], tokens["--surface"])
+    assert ratio >= 4.5, f"accent text on surface is {ratio:.2f}:1 in {theme}"
+
+    ratio = _contrast(tokens["--faint"], tokens["--surface-sunk"])
+    assert ratio >= 3.0, (
+        f"the glossary term underline colour is {ratio:.2f}:1 on the sunk "
+        f"surface in {theme}"
+    )
+
+
+@pytest.mark.parametrize("theme", ["light", "dark"])
 def test_callout_surfaces_are_distinguishable(theme: str) -> None:
     """A caution callout has to look like a caution.
 

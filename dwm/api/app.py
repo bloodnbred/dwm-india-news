@@ -168,19 +168,20 @@ def summary() -> dict[str, Any]:
     """
     facts = _guard(store.load_facts)
     wanted = [
-        "corpus", "outcomes", "rq1_topic_mix", "rq2_bursts", "rq3_sensationalism",
-        "rq4_clusters", "rq5_association_rules", "rq6_market_association",
-        "rq7_classifier", "guards", "honesty_rules",
+        "corpus", "outcomes", "plain", "rq1_topic_mix", "rq2_bursts",
+        "rq3_sensationalism", "rq4_clusters", "rq5_association_rules",
+        "rq6_market_association", "rq7_classifier", "guards", "honesty_rules",
     ]
     out: dict[str, Any] = {}
     for key in wanted:
         block = facts.get(key)
         if block is None:
             continue
-        # `outcomes` is a synthesis, not a measurement, so it has no single
-        # fact header. It is returned as bare data and the dashboard renders
-        # each outcome's own caution.
-        if key == "outcomes":
+        # `outcomes` and `plain` are syntheses, not measurements, so they have
+        # no single fact header. They are returned as bare data; the dashboard
+        # renders each item's own caution, and the per-item cautions travel with
+        # the items.
+        if key in {"outcomes", "plain"}:
             out[key] = block
             continue
         # The cluster projection holds 4,551 plotted headlines. It is a picture,

@@ -80,10 +80,21 @@ function esc(value) {
     .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 
-/** Inline code spans in trusted prose. Used only on strings this project
- *  wrote into facts.json, never on user input. */
+/** Minimal inline markup for trusted prose.
+ *
+ *  Handles `code`, **bold** and *italic*. The emphasis cases were added when the
+ *  plain-language layer started marking words like "*unsettled*" and they
+ *  rendered as literal asterisks, because `md` only knew about backticks. The
+ *  order matters: code first, then bold, then italic, so `**x**` does not become
+ *  a bolded pair of italic markers.
+ *
+ *  Only ever applied to strings this project wrote into facts.json, never to
+ *  user input. `esc` runs first, so the result cannot introduce a tag. */
 function md(text) {
-  return esc(text).replace(/`([^`]+)`/g, "<code>$1</code>");
+  return esc(text)
+    .replace(/`([^`]+)`/g, "<code>$1</code>")
+    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+    .replace(/\*([^*]+)\*/g, "<em>$1</em>");
 }
 
 function num(value) {
@@ -200,12 +211,13 @@ function callout(kind, label, body) {
           </div>`;
 }
 
-function kpi(label, value, unit, tone = "") {
+function kpi(label, value, unit, tone = "", termKey = "", scaleKey = "") {
   return `
     <div class="kpi ${tone ? "kpi--" + tone : ""}">
-      <div class="kpi__label">${esc(label)}</div>
+      <div class="kpi__label">${termKey ? term(termKey) : esc(label)}</div>
       <div class="kpi__value">${esc(value)}</div>
       ${unit ? `<div class="kpi__unit">${md(unit)}</div>` : ""}
+      ${scaleKey ? scaleLine(scaleKey) : ""}
     </div>`;
 }
 
@@ -318,6 +330,114 @@ function sectionHead(title, sub) {
 
 /* ── pages ─────────────────────────────────────────────────────────────── */
 
+/* ── the plain layer ─────────────────────────────────────────────────── */
+
+/** Glossary lookup, built once. `plain.glossary` is static text, so this is a
+ *  dictionary rather than a search. */
+let GLOSSARY = {};
+
+function gloss(term) {
+  return GLOSSARY[String(term).toLowerCase()] || null;
+}
+
+/** A glossary term, marked. The definition travels in the markup rather than in
+ *  a tooltip, so it works without hovering and cannot be clipped off-screen. */
+function term(name) {
+  const definition = gloss(name);
+  if (!definition) return esc(name);
+  return `<abbr class="term" title="${esc(definition)}" tabindex="0">${esc(name)}</abbr>`;
+}
+
+function renderIntro() {
+  const plain = state.summary.plain || {};
+  const intro = plain.intro;
+  if (!intro) return "";
+  return `
+    <section class="intro" aria-labelledby="intro-h">
+      <h2 id="intro-h" class="intro__heading">${esc(intro.heading || "What this is")}</h2>
+      ${(intro.paragraphs || []).map((p) => `<p class="intro__p">${md(p)}</p>`).join("")}
+    </section>`;
+}
+
+/** The thirty-second summary: a claim, the number, and what it does not license.
+ *
+ *  `so_what` is the part that makes this worth reading. Every finding on this
+ *  project has one, and they are the sentences that turn a measurement into a
+ *  conclusion a reader can actually act on. */
+function renderSummary() {
+  const plain = state.summary.plain || {};
+  const summary = plain.summary;
+  if (!summary || !summary.items) return "";
+  const cards = summary.items.map((item, index) => `
+    <article class="finding" id="finding-${esc(item.id)}">
+      <div class="finding__head">
+        <span class="finding__n">${index + 1}</span>
+        <span class="finding__rq">${esc(item.rq || "")}</span>
+      </div>
+      <h3 class="finding__claim">${md(item.claim)}</h3>
+      <p class="finding__body">${md(item.body)}</p>
+      ${item.so_what ? `<div class="finding__sowhat">
+        <span class="finding__sowhatlabel">So what</span>
+        ${md(item.so_what)}
+      </div>` : ""}
+      ${item.caution ? callout("caution", "Worth knowing", item.caution) : ""}
+    </article>`).join("");
+
+  return `
+    <section class="summary" aria-labelledby="summary-h">
+      <div class="sectionhead">
+        <div>
+          <h2 id="summary-h">${esc(summary.heading || "If you read nothing else")}</h2>
+          <p>${md(summary.subtitle || "")}</p>
+        </div>
+      </div>
+      <div class="summary__grid">${cards}</div>
+      ${plain.why ? `<p class="summary__why">${md(plain.why)}</p>` : ""}
+    </section>`;
+}
+
+/** A number with its scale attached. A figure with no range is decoration. */
+function scaleLine(key) {
+  const plain = state.summary.plain || {};
+  const scales = plain.scales || {};
+  const text = scales[key];
+  if (!text) return "";
+  return `<div class="scale">${esc(text)}</div>`;
+}
+
+function renderGlossary() {
+  const plain = state.summary.plain || {};
+  const glossary = plain.glossary;
+  if (!glossary || !glossary.terms) return "";
+  const items = glossary.terms.map((entry) => `
+    <div class="gloss">
+      <div class="gloss__term">${esc(entry.term)}</div>
+      <div class="gloss__plain">${esc(entry.plain)}</div>
+    </div>`).join("");
+  return `
+    <section class="glossary" aria-labelledby="glossary-h">
+      <div class="sectionhead"><div>
+        <h2 id="glossary-h">${esc(glossary.heading || "Words this project uses")}</h2>
+        <p>${md(glossary.subtitle || "")}</p>
+      </div></div>
+      <div class="glossary__grid">${items}</div>
+    </section>`;
+}
+
+/** The plain reading of a cluster, replacing a bare list of tokens. */
+function clusterGloss(clusterId) {
+  const plain = state.summary.plain || {};
+  const terms = (plain.cluster_terms || {})[String(clusterId)];
+  if (!terms) return "";
+  const raw = (terms.raw || []).map((t) => `<code>${esc(t)}</code>`).join(", ");
+  return `
+    <div class="clustergloss">
+      ${terms.summary ? `<div class="clustergloss__plain">${esc(terms.summary)}</div>` : ""}
+      ${terms.note ? `<div class="clustergloss__note">${esc(terms.note)}</div>` : ""}
+      ${raw ? `<div class="clustergloss__raw">Distinguishing words: ${raw}</div>` : ""}
+    </div>`;
+}
+
 function pageOverview() {
   const outcomes = (state.summary.outcomes || {});
   const list = outcomes.outcomes || [];
@@ -325,16 +445,19 @@ function pageOverview() {
   const corpus = state.manifest.corpus || {};
   const rq7 = state.summary.rq7_classifier || {};
   const rq2 = state.summary.rq2_bursts || {};
+  const accuracy = ((rq7.data || {}).metrics || {}).accuracy;
 
   const kpis = [
-    kpi("Headlines analysed", num(corpus.headlines_in_window), "in the 5-year window"),
+    kpi("Headlines analysed", num(corpus.headlines_in_window), "in the 5-year window",
+        "", "", "corpus_size"),
     kpi("Questions with a result",
         `${(counts.positive || 0) + (counts.qualified || 0)}`,
-        `of ${counts.total || 7} asked`, "caution"),
-    kpi("Months spiking on volume", num(rq2.value), "zero — the series is flat", "muted"),
-    kpi("Classifier accuracy", pct((rq7.data || {}).metrics
-      ? rq7.data.metrics.accuracy : null),
-        "upper bound, on augmented data", "positive"),
+        `of ${counts.total || 7} asked — the rest found nothing, which is a finding`,
+        "caution"),
+    kpi("Months spiking on volume", num(rq2.value), "none. the series is flat", "muted"),
+    kpi("Accuracy", pct(accuracy),
+        `vs ${pct(((rq7.data || {}).metrics || {}).majority_baseline_accuracy)} for always guessing "real"`,
+        "positive", "classifier_accuracy", "classifier_accuracy"),
   ].join("");
 
   const cards = list.map((o) => {
@@ -353,26 +476,28 @@ function pageOverview() {
   }).join("");
 
   return `
+    ${renderIntro()}
+
     <div class="hero">What 1.1 million Indian news headlines actually show</div>
     <p class="lede">${md(outcomes.headline || "")}</p>
     <div class="kpis">${kpis}</div>
 
-    ${sectionHead("The seven answers",
-      "In order of how surprising they are. A null result is kept rather than dropped: " +
-      "“we looked and there was nothing” is the answer to a question, and the reader " +
-      "is entitled to know it was asked.")}
+    ${renderSummary()}
+
+    ${sectionHead("The technical view",
+      "Everything above, in full. Same numbers, with the method, the uncertainty and " +
+      "the caveat attached.")}
 
     ${chart("topic_share", "What the corpus is made of",
       "Share of the whole window by topic. “a where, not a what” marks the city desks — " +
       "`Local` alone is 70% of the corpus.",
       "Places and subjects are separated because comparing a city desk against a " +
-      "subject as if they matched would be meaningless. They are 70% and 30% of the " +
-      "corpus respectively.")}
+      "subject as if they matched would be meaningless.")}
     ${chart("rq1_topic_mix", "The topic mix over time",
       "Share of each year's headlines, within-year, because 2015 is a partial year and " +
       "raw counts are not comparable across years.",
       "The 2017 spike in one raw category is a filing artefact of the publisher, not a " +
-      "change in what India was reading. It is called out on the topic mix page.")}
+      "change in what India was reading.")}
 
     ${cards}`;
 }
@@ -387,6 +512,12 @@ function pageFindings(sub) {
   if (!outcome) {
     return `<div class="empty">No outcome recorded for ${esc(question.rq)}.</div>`;
   }
+
+  // The plain reading of this one question, taken from the thirty-second
+  // summary. Same measurement, same caveat, no method vocabulary — so a reader
+  // can get the conclusion before meeting the technique that produced it.
+  const plainItem = (((state.summary.plain || {}).summary || {}).items || [])
+    .find((i) => i.id === question.id);
 
   let body = "";
   switch (question.id) {
@@ -498,8 +629,9 @@ function pageFindings(sub) {
           "separation the silhouette is scoring.")}
         ${chart("rq4_cluster_sizes", "Where the headlines actually went",
           "Share of the sample per cluster. The point of this chart is the shape, not the ranking.",
-          "The small clusters find writing patterns — money terms, traffic and crime, age " +
-          "copy — rather than topics in the publisher's own taxonomy.")}
+          "The small clusters find writing patterns — money terms, traffic deaths, ages — " +
+          "rather than topics in the publisher's own taxonomy.")}
+        ${renderClusterTable(data)}
         ${chart("rq4_cluster_topics", "Which publisher topics dominate each cluster",
           "The evidence that these clusters are not the publisher's desks.",
           "Every cluster is dominated by `Local`, because 70% of the corpus is. The clusters " +
@@ -671,7 +803,79 @@ function pageFindings(sub) {
       body = "";
   }
 
-  return answerBlock(outcome) + body;
+  const plainBlock = plainItem ? `
+    <section class="plainread">
+      <div class="plainread__label">In plain language</div>
+      <p class="plainread__body">${md(plainItem.body)}</p>
+      ${plainItem.so_what ? `<div class="finding__sowhat">
+        <span class="finding__sowhatlabel">So what</span>
+        ${md(plainItem.so_what)}
+      </div>` : ""}
+      ${plainItem.caution ? callout("caution", "Worth knowing", plainItem.caution) : ""}
+    </section>` : "";
+
+  const scales = (state.summary.plain || {}).scales || {};
+  const scaleFor = { clusters: "silhouette", market: "volatility_correlation",
+                     rules: "rule_count" }[question.id];
+
+  return (
+    plainBlock +
+    answerBlock(outcome) +
+    (scaleFor && scales[scaleFor]
+      ? `<div class="callout callout--note scale-note">
+           <span class="callout__label">How to read that number</span>
+           ${esc(scales[scaleFor])}
+         </div>`
+      : "") +
+    body
+  );
+}
+
+/** Every cluster with its plain reading beside the raw words.
+ *
+ *  Without this the reader sees `rs crore, lakh, road, accident, killed, old,
+ *  year old` and has to work out what it means. With it, "Indian rupee amounts"
+ *  and "traffic and deaths" say it for them, and the raw words stay available for
+ *  anyone who wants to check the claim. */
+function renderClusterTable(data) {
+  const clusters = (data.clusters || []);
+  if (!clusters.length) return "";
+  const glosses = (state.summary.plain || {}).cluster_terms || {};
+  const rows = clusters.map((c) => {
+    const g = glosses[String(c.cluster_id)] || {};
+    return {
+      id: c.cluster_id,
+      size: c.size,
+      share: c.share_of_sample,
+      summary: g.summary || "—",
+      raw: (g.raw || c.top_terms || []).slice(0, 8),
+      note: g.note || "",
+    };
+  });
+  return `
+    ${sectionHead("What each cluster is, in plain language",
+      "The distinguishing words translated. The raw vocabulary is kept beside it so " +
+      "the translation can be checked rather than taken on trust.")}
+    <div class="tablewrap"><div class="tablescroll">
+      <table class="data">
+        <thead><tr>
+          <th>Cluster</th><th class="num">Headlines</th><th class="num">Share</th>
+          <th>What distinguishes it</th><th>Distinguishing words</th>
+        </tr></thead>
+        <tbody>${rows.map((r) => `
+          <tr>
+            <td>${esc(r.id)}</td>
+            <td class="num">${num(r.size)}</td>
+            <td class="num">${pct(r.share)}</td>
+            <td>
+              <div style="font-weight:550">${esc(r.summary)}</div>
+              ${r.note ? `<div class="small faint" style="margin-top:3px">${esc(r.note)}</div>` : ""}
+            </td>
+            <td class="dim">${r.raw.map((t) => `<code>${esc(t)}</code>`).join(" ")}</td>
+          </tr>`).join("")}
+        </tbody>
+      </table>
+    </div></div>`;
 }
 
 function buildTermRows(terms) {
@@ -985,20 +1189,39 @@ const DECISIONS = [
 ];
 
 function pageHow() {
-  const tab = state.route.tab || "Guard rails";
+  const tab = state.route.tab || "Plain guide";
   let body;
   if (tab === "Corrections") body = howCorrections();
   else if (tab === "Decisions") body = howDecisions();
   else if (tab === "Warehouse shape") body = howWarehouse();
   else if (tab === "Rules") body = howRules();
-  else body = howGuards();
+  else if (tab === "Guard rails") body = howGuards();
+  else body = howPlainGuide();
 
   return `
     <div class="lede">The parts of this project that do not show up as a number.
     Each was found by checking the output rather than trusting it, and each had looked
     convincingly like a finding.</div>
-    ${tabs(["Guard rails", "Corrections", "Decisions", "Warehouse shape", "Rules"], tab)}
+    ${tabs(["Plain guide", "Guard rails", "Corrections", "Decisions", "Warehouse shape", "Rules"], tab)}
     ${body}`;
+}
+
+function howPlainGuide() {
+  const plain = state.summary.plain || {};
+  const scales = plain.scales || {};
+  const scaleRows = Object.entries(scales).map(([key, text]) => `
+    <div class="gloss">
+      <div class="gloss__term">${esc(key.replace(/_/g, " "))}</div>
+      <div class="gloss__plain">${esc(text)}</div>
+    </div>`).join("");
+  return `
+    ${renderIntro()}
+    ${sectionHead("Every headline number, with its range",
+      "A figure with no scale is decoration. These are the ranges and comparisons that " +
+      "make each one judgeable.")}
+    <div class="glossary__grid">${scaleRows}</div>
+    ${renderGlossary()}
+    ${renderSummary()}`;
 }
 
 function howGuards() {
@@ -1446,6 +1669,13 @@ async function boot() {
     state.manifest = manifest;
     state.summary = summary;
     state.charts = charts.charts || {};
+
+    // Glossary lookup, built once. Terms are marked inline wherever they appear.
+    const terms = (((summary.plain || {}).glossary) || {}).terms || [];
+    GLOSSARY = {};
+    for (const entry of terms) {
+      GLOSSARY[entry.term.toLowerCase()] = entry.plain;
+    }
 
     // The honesty check, run once over the whole payload.
     state.uncautoned = auditPayload(summary);

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-02T09:27:32.595523+00:00",
+  "generated_at": "2026-10-02T09:59:04.563969+00:00",
   "mining_run_id": "20261002T092603Z",
   "config_version": 1,
   "corpus": {
@@ -35,8 +35,8 @@
       "month_day": 6789
     },
     "ifnd_label_balance": {
-      "FAKE": 17426,
-      "REAL": 33684
+      "REAL": 33684,
+      "FAKE": 17426
     }
   },
   "datasets": {
@@ -27253,6 +27253,257 @@
       "split": 1,
       "total": 7
     }
+  },
+  "plain": {
+    "intro": {
+      "heading": "What this is",
+      "paragraphs": [
+        "A data warehouse built from three public datasets: 3,154,916 Times of India headlines, 51,110 labelled statements from the Indian fact-checking site IFND, and 3,718 days of Nifty 50 index prices. Of the headlines, 1,113,427 fall inside the five-year window this study analyses. The warehouse can answer questions across all of it in seconds.",
+        "Seven questions were asked of it. Three of them produced no result, or a result that reads better than it actually is.",
+        "Those are reported here with the same care as the rest, and each one comes with the measurement that establishes it. Knowing what a dataset cannot support is as useful as knowing what it can \u2014 and it is the part most analyses leave out."
+      ]
+    },
+    "summary": {
+      "heading": "If you read nothing else",
+      "subtitle": "Six things this study found, in plain language. Every figure here is the same one on the detailed pages underneath.",
+      "items": [
+        {
+          "id": "volume",
+          "rq": "RQ2",
+          "claim": "News volume carries no news signal.",
+          "body": "How many headlines were published per month barely moves \u2014 by under 3.5% within any single year. Not one month in the five-year window stood out as unusually busy. Events people would expect to drive coverage, including the national lockdown in March 2020, did not drive it.",
+          "so_what": "The archive behaves like a publisher filling a quota rather than a newsroom reacting to the news. That matters because it tells you what this corpus is *not* useful for: measuring public attention to an event. This data cannot tell that pattern apart from an artefact of how the publisher exported it, and we are not going to guess.",
+          "caution": "Derived from the measured z-scores above, not asserted. Note that these are departures from the norm, not dramatic swings: the largest is around 1.5 standard deviations on a series this flat."
+        },
+        {
+          "id": "clusters",
+          "rq": "RQ4",
+          "claim": "Only about 5% of headlines fall into clearly separate groups.",
+          "body": "Sixty thousand headlines were grouped by the words they use. One group absorbed 94.9% of them. The other three groups were small and tidy: headlines about money amounts, about traffic deaths, about people's ages.",
+          "so_what": "So the separation that exists is in *writing habits*, not subject areas, and it does not line up with the publisher's own categories. Saying 'the headlines cluster into topics' would over-read this by a long way.",
+          "caution": "One cluster holds 94.88% of the sample and 3 further clusters hold at least 1% each. A high silhouette in this shape does not mean the corpus is well clustered: it means a small, well-separated topical minority exists and the remainder is undifferentiated. Read the score and the shape together."
+        },
+        {
+          "id": "mix",
+          "rq": "RQ1",
+          "claim": "70% of the headlines are local news \u2014 and the biggest apparent trend is a filing error.",
+          "body": "The largest single category is Local \u2014 city and regional coverage \u2014 at 70.0% of the five-year window. The biggest subject is Entertainment at 8.9%, so nothing else comes close. The largest apparent shift in the whole dataset is not a shift in what India was reading: one raw category holds 11.1% of all 2017 headlines, which means the publisher changed how it filed, not what it published.",
+          "so_what": "This is the clearest case in the study of a change in the data that is not a change in the world. An analysis that missed it would report the largest editorial shift in five years of coverage, and it would be entirely fictional.",
+          "caution": "A single raw category holding this share of a year indicates a change in how the publisher filed content, not a change in reader interest. Affected years need this caveat in the report."
+        },
+        {
+          "id": "market",
+          "rq": "RQ6",
+          "claim": "Headlines do not predict market moves \u2014 but they do track market calm.",
+          "body": "Against the index's daily percentage change, there is no relationship. Fifteen different time lags were tested \u2014 does volume lead the market by a day, a week, a month? \u2014 and one of them coming out \"significant\" is exactly what chance alone produces. Against how *unsettled* the market is, though, there is a real relationship: busier headline days go with calmer markets.",
+          "so_what": "About 28 in every 100 busier-headline days went with a calmer market, which is a weak-to-moderate link, not a strong one. We cannot explain the direction, and we should be suspicious of anyone who claims they can: both series simply react to the same underlying events, and nothing in this data shows which way the arrow points.",
+          "caution": "Association only. Two things moving together is not one causing the other."
+        },
+        {
+          "id": "classifier",
+          "rq": "RQ7",
+          "claim": "A classifier does separate real statements from fake ones \u2014 and 95.7% is a ceiling, not a fair score.",
+          "body": "On the labelled data it scored 95.7% accurate. Always answering 'real' would already score 65.9%, because most labelled statements are real.",
+          "so_what": "Part of the fake class in this dataset is machine-generated text, which is far easier to spot than a falsehood written by a person. A real deployment would score lower. Read it as 'this approach works', not 'this works this well'.",
+          "caution": "Part of IFND's Fake class is LSTM-generated augmentation of real statements, which is easier to distinguish than a fake article written by a person. This accuracy is therefore an upper bound on performance against genuine misinformation."
+        },
+        {
+          "id": "language",
+          "rq": "RQ3",
+          "claim": "Education headlines use the most alarm-heavy writing.",
+          "body": "10.9% of Education headlines trip the alarm-style detector, against 3.8% across all headlines. That is about 2.9 times as often.",
+          "so_what": "This is a measure of *writing style*, on headlines that nobody has labelled as true or false. It is a risk-signal rate and never a fake-news rate, and the cut-off used to define 'alarm-heavy' is a judgement, not a fact \u2014 so the report also shows how the ranking changes as that cut-off moves.",
+          "caution": "A style measure on unlabelled headlines. Never a fake-news rate."
+        },
+        {
+          "id": "rules",
+          "rq": "RQ5",
+          "claim": "644 co-occurrence patterns were found \u2014 and most of them are arithmetic.",
+          "body": "A pattern is a combination of attributes that turns up together more often than chance would predict. 313 of the 644 were trivially true \u2014 'a 2015 headline is a Local headline' \u2014 because they follow from how the data was labelled rather than from anything about the news. 8 were genuinely informative.",
+          "so_what": "Even those eight lean on 2017 being an unusual year, which inflates their scores. The honest summary is that this corpus has weak co-occurrence structure \u2014 which is a finding about the data, and worth more than a table of impressive-looking numbers would have been.",
+          "caution": "The highest-lift table is not dominated by the partial final period. Lift is still maximised by rare consequents in general, so the confidence table below is the more informative of the two."
+        }
+      ]
+    },
+    "glossary": {
+      "heading": "Words this project uses",
+      "subtitle": "Sixteen terms, one sentence each. Anything else in the numbers is either ordinary English or is explained where it appears.",
+      "terms": [
+        {
+          "term": "Silhouette score",
+          "plain": "How well the groups separate from each other. 0 means they blur together and 1 means they are perfectly distinct. This project's score is high only because one small group is unusually tidy."
+        },
+        {
+          "term": "Cluster",
+          "plain": "A group of headlines that use similar words. A cluster is a writing style, not a subject \u2014 these ones are not the publisher's topic categories."
+        },
+        {
+          "term": "Lift",
+          "plain": "How much more often two things appear together than chance would predict. Lift 1.0 means exactly as often as chance, so anything at 1.0 carries no information."
+        },
+        {
+          "term": "Confidence",
+          "plain": "Out of all the times the first thing appeared, how often the second followed. A percentage, and a statement about the second thing only."
+        },
+        {
+          "term": "Support",
+          "plain": "How often the combination appears in the data at all. A high lift on something that almost never happens is not worth much."
+        },
+        {
+          "term": "Tautological rule",
+          "plain": "A pattern that is true by arithmetic rather than by observation \u2014 'if it is Q1 2016 then it is 2016'. They are counted separately so they cannot inflate the interesting number."
+        },
+        {
+          "term": "Risk-signal rate",
+          "plain": "The share of headlines using alarm-heavy words and punctuation. It measures writing style on headlines nobody has labelled, so it is never a fake-news rate."
+        },
+        {
+          "term": "Correlation (r)",
+          "plain": "How tightly two measurements move together. 0 is no relationship, 1 means they rise together, -1 means they move in opposite directions. It never shows cause."
+        },
+        {
+          "term": "p-value",
+          "plain": "How surprising a result would be if there were no real relationship at all. Below 0.05 is the usual bar for 'probably not chance'."
+        },
+        {
+          "term": "Confidence interval",
+          "plain": "The plausible range around a measured rate. The bar is the best single guess; the interval is the honest part."
+        },
+        {
+          "term": "Coefficient of variation",
+          "plain": "How wobbly a series is, ignoring how big it is. Under about 10% means the numbers barely move."
+        },
+        {
+          "term": "z-score",
+          "plain": "How many standard deviations a month sits above or below its usual level. +2 is notably high, -2 notably low, 0 is normal."
+        },
+        {
+          "term": "TF-IDF",
+          "plain": "A way of scoring words so that rare ones count for more than common ones. It is why clustering finds specific vocabulary rather than 'said' and 'police'."
+        },
+        {
+          "term": "LSA component",
+          "plain": "One axis along which headlines spread out, ordered by how much their vocabulary differs. The direction means nothing; only the spread does."
+        },
+        {
+          "term": "Star schema",
+          "plain": "The warehouse layout. Big fact tables in the middle, lookup tables around them, so one question reads a few rows instead of millions."
+        },
+        {
+          "term": "Cube",
+          "plain": "A pre-calculated summary table, so a cross-tabulation does not have to be rebuilt on every question. It stores sums, never averages, because a rounded average cannot be averaged again."
+        }
+      ]
+    },
+    "scales": {
+      "silhouette": "Out of a possible 0 to 1, where 0 is no structure at all. Short news text usually scores 0.1 to 0.3, so this sits in the normal band \u2014 and reaches the top of it only because a small minority of headlines is unusually well separated.",
+      "dominant_cluster_share": "The other 5.1% is the part that separated. A high score on this measure can coexist with 95% of the corpus being indistinguishable, and here it does.",
+      "classifier_accuracy": "Out of a possible 100%. The bar to clear is not 100 \u2014 it is 65.9%, which is what you get by always answering 'real' and knowing nothing.",
+      "volatility_correlation": "Out of a possible -1 to +1, where 0 is no relationship at all. This is a weak-to-moderate link, explaining about 8% of the day-to-day variation in volatility.",
+      "rule_count": "Out of 644 patterns found. 313 were true by arithmetic and 8 were genuinely informative, so the headline count overstates the finding by a wide margin.",
+      "volume_bursts": "Out of roughly 60 months checked. Zero is the finding: monthly volume varies by under 4%, so no threshold can fire on a series this flat.",
+      "corpus_size": "Out of 3,154,916 headlines loaded. The rest fall outside the five-year analysis window.",
+      "fp_growth_speedup": "A ratio, not a percentage. Both algorithms found identical patterns; only the time differs, which is the one thing the comparison can actually show."
+    },
+    "cluster_terms": {
+      "0": {
+        "size": 56930,
+        "share_of_sample": 0.9488,
+        "is_dominant": true,
+        "raw": [
+          "new",
+          "india",
+          "says",
+          "held",
+          "man",
+          "city",
+          "govt",
+          "delhi",
+          "cops",
+          "police",
+          "bjp",
+          "day"
+        ],
+        "descriptions": [],
+        "summary": "General news vocabulary \u2014 no distinguishing subject",
+        "note": "This group holds 94.9% of the sample, so its distinguishing words are just the words most headlines use. It is the absence of a topic, not a topic."
+      },
+      "2": {
+        "size": 1519,
+        "share_of_sample": 0.0253,
+        "is_dominant": false,
+        "raw": [
+          "rs",
+          "crore",
+          "rs crore",
+          "rs lakh",
+          "lakh",
+          "worth",
+          "worth rs",
+          "cr",
+          "rs cr",
+          "seized",
+          "held",
+          "man"
+        ],
+        "descriptions": [
+          "Indian rupee amounts (a crore is 10 million)",
+          "people's ages",
+          "money and business"
+        ],
+        "summary": "Indian rupee amounts (a crore is 10 million), people's ages, money and business",
+        "note": null
+      },
+      "1": {
+        "size": 776,
+        "share_of_sample": 0.0129,
+        "is_dominant": false,
+        "raw": [
+          "road",
+          "road accident",
+          "accident",
+          "garbage",
+          "killed",
+          "main road",
+          "main",
+          "killed road",
+          "accidents",
+          "traffic",
+          "road safety",
+          "road accidents"
+        ],
+        "descriptions": [
+          "traffic and deaths"
+        ],
+        "summary": "traffic and deaths",
+        "note": null
+      },
+      "3": {
+        "size": 775,
+        "share_of_sample": 0.0129,
+        "is_dominant": false,
+        "raw": [
+          "old",
+          "year old",
+          "year",
+          "yr old",
+          "yr",
+          "old girl",
+          "girl",
+          "man",
+          "dies",
+          "old boy",
+          "old man",
+          "boy"
+        ],
+        "descriptions": [
+          "people's ages"
+        ],
+        "summary": "people's ages",
+        "note": null
+      }
+    },
+    "why": "The technical pages are not going anywhere. Every number here also appears there with its method, its uncertainty and its caveat \u2014 this layer only adds the translation."
   },
   "honesty_rules": [
     "On the unlabelled TOI corpus every style measure is a RISK-SIGNAL rate. It is never a fake-news rate.",

@@ -4,7 +4,7 @@ A data-warehousing and mining study built on 3,297,172 Times of India headlines,
 
 **Analysis window** 2015-06-30 to 2020-06-30, which is 6 calendar years. The window is derived from the last publish date in the corpus, not hard-coded, and it is applied as a **flag rather than a filter**: 2,041,489 out-of-window headlines stay in the warehouse and remain queryable.
 
-*Generated 2026-10-02T09:27:32 from `facts.json` (mining run 20261002T092603Z).*
+*Generated 2026-10-02T09:59:04 from `facts.json` (mining run 20261002T092603Z).*
 
 > **Two of the seven findings are negative, and they are the most
 > informative results in this study.** Monthly headline volume does not
@@ -648,4 +648,4 @@ presentable.
   part that inflates the classifier's apparent skill.
 ---
 
-Generated 2026-10-02 14:57 from `facts.json` (mining run 20261002T092603Z). Every figure in this document is rendered from a fact that records its own source. No language model was involved in producing it.
+Generated 2026-10-02 15:29 from `facts.json` (mining run 20261002T092603Z). Every figure in this document is rendered from a fact that records its own source. No language model was involved in producing it.

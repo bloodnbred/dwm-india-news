@@ -177,6 +177,32 @@ numbers the way prose does. `report.md` and the dashboard render the same block.
 A null result is kept rather than dropped: "we looked and there was nothing" is
 the answer to a question.
 
+### The plain-language layer
+
+The dashboard was correct and unreadable: `silhouette 0.2582` and `LSA
+component 1` and `313 tautological rules` expected the reader to supply the
+meaning. `dwm/inference/plain.py` sits *beside* the technical layer and adds the
+translation, because a project that hid the technical detail would look shallow
+in a viva and both audiences have to be served.
+
+It carries four things: a three-sentence intro of what was built and why the null
+results are here, a seven-item summary where each finding states its claim, its
+number, **what it means for the reader**, and its caution, a sixteen-term
+glossary, and a scale for every headline figure. Cluster vocabulary is
+translated too — `rs crore, lakh` becomes "Indian rupee amounts" — with the raw
+words kept beside the translation so the claim can be checked.
+
+Every figure is interpolated from `facts.json`, never retyped, so the layer
+cannot drift from the measurements. `tests/test_plain_layer.py` enforces it: the
+quoted fragments must match the facts, the summary must cover all seven research
+questions including the nulls, no term of art may appear in the intro or summary,
+no scale may flatter its number, and every cluster gloss must be backed by one of
+that cluster's own words.
+
+The cluster glossing has a deliberate fallback: a cluster whose distinguishing
+vocabulary matches no known pattern returns no description and says so, rather
+than being described anyway.
+
 ### Cautions
 
 `figure()` in `app.js` refuses to render a figure that has a unit and no

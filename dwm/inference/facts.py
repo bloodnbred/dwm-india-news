@@ -35,6 +35,7 @@ from typing import Any
 import duckdb
 
 from dwm.config import reports_dir
+from dwm.inference.plain import build_plain
 from dwm.logging_utils import get, human_int
 
 log = get("dwm.inference.facts")
@@ -919,6 +920,12 @@ def build_facts(
     # The inference layer: the study's answer, derived from the values above so
     # it cannot drift away from them.
     facts["outcomes"] = build_outcomes(facts)
+    # The plain-language layer. Sits beside the technical one rather than
+    # replacing it: a reader with no data-warehousing background could read every
+    # number in this file and come away with no conclusion, which makes the rest
+    # of the project pointless. Built from the same measured values, so the two
+    # layers cannot disagree.
+    facts["plain"] = build_plain(facts)
     facts["honesty_rules"] = [
         "On the unlabelled TOI corpus every style measure is a RISK-SIGNAL "
         "rate. It is never a fake-news rate.",

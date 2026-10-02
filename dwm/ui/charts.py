@@ -230,7 +230,7 @@ def rq2_event_z(facts: dict[str, Any], t: dict[str, Any]) -> dict[str, Any]:
         .mark_bar(cornerRadiusEnd=3)
         .encode(
             y=alt.Y("month:N", sort=months, axis=_axis(t, None, labelAngle=0)),
-            x=alt.X("z:Q", axis=_axis(t, "standard deviations from that desk's own norm")),
+            x=alt.X("z:Q", axis=_axis(t, "standard deviations above or below that desk's usual level")),
             color=_named("coverage fell", "coverage rose", t["caution"], t["accent"]),
             yOffset="desk:N",
             tooltip=[
@@ -388,7 +388,7 @@ def rq4_silhouette(facts: dict[str, Any], t: dict[str, Any]) -> dict[str, Any]:
         .mark_point(size=70, filled=True, color=t["accent"])
         .encode(
             x=alt.X("k:O", axis=_axis(t, "k", labelAngle=0, gridColor=None)),
-            y=alt.Y("silhouette:Q", axis=_axis(t, "silhouette score")),
+            y=alt.Y("silhouette:Q", axis=_axis(t, "separation score (0 to 1, higher is better)")),
             tooltip=["k:O", alt.Tooltip("silhouette:Q", format=".4f")],
         )
     )
@@ -431,7 +431,7 @@ def rq4_cluster_sizes(facts: dict[str, Any], t: dict[str, Any]) -> dict[str, Any
         .mark_bar(cornerRadiusEnd=4)
         .encode(
             y=alt.Y("cluster_id:N", sort=ids, axis=_axis(t, "cluster", gridColor=None)),
-            x=alt.X("share_of_sample:Q", axis=_axis(t, "share of the sample")),
+            x=alt.X("share_of_sample:Q", axis=_axis(t, "share of the 60,000 sampled headlines")),
             color=_named(
                 "the undifferentiated remainder",
                 "a distinguishable topic",
@@ -486,6 +486,10 @@ def rq4_projection(facts: dict[str, Any], t: dict[str, Any]) -> dict[str, Any]:
 
     # Opacity falls as the cluster gets smaller so a 775-member group is still
     # visible against a 57,000-member cloud.
+    #
+    # The axis labels say "vocabulary spread" rather than "LSA component", because
+    # the direction of these axes means nothing and only the spread does. The
+    # technical name is in the tooltip for anyone who wants it.
     opacities = [0.16, 0.55, 0.7, 0.8, 0.8, 0.85, 0.85, 0.9]
     layers = []
     for index, cluster in enumerate(ordered):
@@ -495,12 +499,12 @@ def rq4_projection(facts: dict[str, Any], t: dict[str, Any]) -> dict[str, Any]:
             alt.Chart(alt.Data(values=members))
             .mark_circle(size=13, opacity=opacities[index % len(opacities)], color=colour)
             .encode(
-                x=alt.X("x:Q", axis=_axis(t, "LSA component 1")),
-                y=alt.Y("y:Q", axis=_axis(t, "LSA component 2")),
+                x=alt.X("x:Q", axis=_axis(t, "Vocabulary spread, left to right")),
+                y=alt.Y("y:Q", axis=_axis(t, "Vocabulary spread, bottom to top")),
                 tooltip=[
                     alt.Tooltip("group:N"),
-                    alt.Tooltip("x:Q", title="LSA 1", format=".3f"),
-                    alt.Tooltip("y:Q", title="LSA 2", format=".3f"),
+                    alt.Tooltip("x:Q", title="LSA component 1", format=".3f"),
+                    alt.Tooltip("y:Q", title="LSA component 2", format=".3f"),
                 ],
             )
         )
@@ -633,7 +637,7 @@ def rq6_returns(points: list[dict[str, Any]], t: dict[str, Any],
         alt.Chart(alt.Data(values=rows))
         .mark_circle(size=14, opacity=0.25, color=t["muted"])
         .encode(
-            x=alt.X("x:Q", axis=_axis(t, "log headline volume per day")),
+            x=alt.X("x:Q", axis=_axis(t, "headlines per day (log scale)")),
             y=alt.Y("y:Q", axis=_axis(t, "daily return (%)")),
             tooltip=[
                 "date:T",
@@ -760,7 +764,7 @@ def rq6_volatility(points: list[dict[str, Any]], t: dict[str, Any],
         alt.Chart(alt.Data(values=rows))
         .mark_circle(size=16, opacity=0.3, color=t["accent"])
         .encode(
-            x=alt.X("x:Q", axis=_axis(t, "log headline volume per day")),
+            x=alt.X("x:Q", axis=_axis(t, "headlines per day (log scale)")),
             y=alt.Y("y:Q", axis=_axis(t, "20-day volatility")),
             tooltip=[
                 "date:T",
